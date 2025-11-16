@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Zero-build workout tracking web application">
+  <title>FiTrack3 - Workout Tracker</title>
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="/css/main.css">
+  
+  <!-- GSAP Animation Library -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.4/dist/gsap.min.js"></script>
+</head>
+<body>
+  <!-- Vue App Mount Point -->
+  <div id="app"></div>
+
+  <!-- Vue.js 3 ESM Build + Application Bootstrap -->
+  <script type="module">
+    // Import the full 'createApp' function from the browser-native module
+    import { createApp } from 'https://unpkg.com/vue@3.4.3/dist/vue.esm-browser.js';
+    
+    // Import our local application logic
+    import App from './js/app.js';
+    
+    // Mount the application
+    createApp(App).mount('#app');
+  </script>
+</body>
+</html>

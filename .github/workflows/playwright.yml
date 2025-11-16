@@ -1,0 +1,49 @@
+# Playwright Tests CI Workflow
+name: Playwright Tests
+
+on:
+  push:
+    branches: [ main, copilot/** ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Install dependencies
+        # Install Playwright and the 'http-server' for the webServer
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        # Install Chromium, Firefox, WebKit and their dependencies
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        # This one command will:
+        # 1. Start the 'http-server' (from playwright.config.js)
+        # 2. Run all tests in the '/tests' directory
+        # 3. This includes 'mocha.spec.js' and 'app.spec.js'
+        run: npx playwright test
+
+      - name: Upload test report
+        # This step saves the HTML report as a CI artifact
+        uses: actions/upload-artifact@v4
+        if: always() # Run even if tests fail
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30

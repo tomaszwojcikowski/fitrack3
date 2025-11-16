@@ -1,0 +1,24 @@
+{
+  "name": "fitrack3",
+  "version": "1.0.0",
+  "description": "Zero-build workout tracking web application",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "dev": "http-server -p 8080 -c-1"
+  },
+  "keywords": [
+    "workout",
+    "fitness",
+    "pwa",
+    "web-components",
+    "vue"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.40.0",
+    "http-server": "^14.1.1"
+  }
+}
