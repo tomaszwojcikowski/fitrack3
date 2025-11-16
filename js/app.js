@@ -93,14 +93,42 @@ export default {
     },
     
     navigate(view) {
-      this.currentView = view;
-      // Load data when navigating to specific views
-      if (view === 'templates') {
-        this.loadTemplates();
-      } else if (view === 'history') {
-        this.loadWorkoutHistory();
-      } else if (view === 'settings') {
-        this.loadSettings();
+      // Animate out current view
+      const mainContent = document.querySelector('.main-content');
+      if (mainContent && window.gsap) {
+        window.gsap.to(mainContent, {
+          opacity: 0,
+          y: -10,
+          duration: 0.2,
+          onComplete: () => {
+            this.currentView = view;
+            // Load data when navigating to specific views
+            if (view === 'templates') {
+              this.loadTemplates();
+            } else if (view === 'history') {
+              this.loadWorkoutHistory();
+            } else if (view === 'settings') {
+              this.loadSettings();
+            }
+            // Animate in new view
+            this.$nextTick(() => {
+              window.gsap.fromTo(mainContent, 
+                { opacity: 0, y: 10 },
+                { opacity: 1, y: 0, duration: 0.3 }
+              );
+            });
+          }
+        });
+      } else {
+        // Fallback without animation
+        this.currentView = view;
+        if (view === 'templates') {
+          this.loadTemplates();
+        } else if (view === 'history') {
+          this.loadWorkoutHistory();
+        } else if (view === 'settings') {
+          this.loadSettings();
+        }
       }
     },
     
