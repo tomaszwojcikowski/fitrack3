@@ -52,9 +52,22 @@ async function checkDatabaseAvailability() {
     return false;
   }
   
+  // First check if IndexedDB is available at all
+  if (!window.indexedDB) {
+    dbAvailable = false;
+    dbError = new Error('IndexedDB is not supported by this browser');
+    console.error('IndexedDB not supported');
+    return false;
+  }
+  
   try {
     // Try to open the database to verify it's accessible
     await db.open();
+    
+    // Additional test: Try to perform a simple transaction to ensure database is fully functional
+    // This catches cases where open() succeeds but operations fail (e.g., private browsing on some iOS versions)
+    const testCount = await db.exercises.count();
+    
     dbAvailable = true;
     dbError = null;
     return true;
@@ -63,21 +76,37 @@ async function checkDatabaseAvailability() {
     dbError = error;
     console.error('Database initialization failed:', error);
     
-    // Check if it's a quota exceeded error or private browsing
+    // Check specific error types and provide helpful messages
     if (error.name === 'QuotaExceededError' || 
-        error.message?.includes('private browsing') ||
-        error.message?.includes('QuotaExceededError')) {
-      console.warn('IndexedDB is not available. Possible causes: private browsing mode, storage quota exceeded, or browser restrictions.');
+        error.message?.includes('QuotaExceeded') ||
+        error.message?.includes('quota')) {
+      console.warn('IndexedDB quota exceeded. This can happen in private browsing mode or when storage is full.');
+    } else if (error.name === 'InvalidStateError' ||
+               error.message?.includes('InvalidState')) {
+      console.warn('IndexedDB is in an invalid state. This often occurs in private browsing mode on iOS Safari.');
+    } else if (error.name === 'NotFoundError' ||
+               error.name === 'VersionError') {
+      console.warn('Database version error. This might be resolved by refreshing the page.');
+    } else {
+      console.warn('IndexedDB is not available. Possible causes: private browsing mode, browser restrictions, or storage issues.');
     }
     
     return false;
   }
 }
 
+// Get current database status
+export function getDatabaseStatus() {
+  return {
+    available: dbAvailable,
+    error: dbError
+  };
+}
+
 // Export database instance and availability checker
 export { db, checkDatabaseAvailability, dbAvailable, dbError };
 
-// Helper function to handle database operations with error handling
+// Helper function to handle database operations with error handling and retry logic
 async function handleDbOperation(operation, fallbackValue = null) {
   try {
     if (!dbAvailable) {
@@ -87,17 +116,33 @@ async function handleDbOperation(operation, fallbackValue = null) {
     return await operation();
   } catch (error) {
     console.error('Database operation failed:', error);
-    // If it's a database not open error, try to open it
-    if (error.name === 'DatabaseClosedError' || error.message?.includes('not open')) {
-      await checkDatabaseAvailability();
-      // Retry once
-      try {
-        return await operation();
-      } catch (retryError) {
-        console.error('Database operation retry failed:', retryError);
-        return fallbackValue;
+    
+    // Handle specific error cases that might be recoverable
+    if (error.name === 'DatabaseClosedError' || 
+        error.message?.includes('not open') ||
+        error.message?.includes('Database has been closed')) {
+      // Try to reopen the database
+      console.log('Attempting to reopen database...');
+      const reopened = await checkDatabaseAvailability();
+      if (reopened) {
+        // Retry the operation once
+        try {
+          return await operation();
+        } catch (retryError) {
+          console.error('Database operation retry failed:', retryError);
+          return fallbackValue;
+        }
       }
+    } else if (error.name === 'QuotaExceededError') {
+      console.error('Storage quota exceeded. Consider clearing old data or using a different browser.');
+      dbAvailable = false;
+      dbError = error;
+    } else if (error.name === 'InvalidStateError') {
+      console.error('Database in invalid state. This is common in private browsing mode.');
+      dbAvailable = false;
+      dbError = error;
     }
+    
     return fallbackValue;
   }
 }
