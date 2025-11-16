@@ -6,70 +6,149 @@
 }
 
 :root {
-  /* Light theme colors */
-  --primary-color: #2563eb;
-  --primary-dark: #1e40af;
-  --primary-light: #3b82f6;
-  --secondary-color: #f59e0b;
-  --secondary-dark: #d97706;
+  /* Material Design 3 Light theme colors */
+  --md-primary: #6750A4;
+  --md-on-primary: #FFFFFF;
+  --md-primary-container: #EADDFF;
+  --md-on-primary-container: #21005D;
+  
+  --md-secondary: #625B71;
+  --md-on-secondary: #FFFFFF;
+  --md-secondary-container: #E8DEF8;
+  --md-on-secondary-container: #1D192B;
+  
+  --md-tertiary: #7D5260;
+  --md-on-tertiary: #FFFFFF;
+  --md-tertiary-container: #FFD8E4;
+  --md-on-tertiary-container: #31111D;
+  
+  --md-error: #B3261E;
+  --md-on-error: #FFFFFF;
+  --md-error-container: #F9DEDC;
+  --md-on-error-container: #410E0B;
+  
+  --md-surface: #FEF7FF;
+  --md-on-surface: #1D1B20;
+  --md-surface-variant: #E7E0EC;
+  --md-on-surface-variant: #49454F;
+  --md-outline: #79747E;
+  --md-outline-variant: #CAC4D0;
+  
+  --md-background: #FEF7FF;
+  --md-on-background: #1D1B20;
+  
+  /* Material Design 3 Elevation shadows */
+  --md-elevation-1: 0px 1px 2px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --md-elevation-2: 0px 1px 2px rgba(0, 0, 0, 0.3), 0px 2px 6px 2px rgba(0, 0, 0, 0.15);
+  --md-elevation-3: 0px 1px 3px rgba(0, 0, 0, 0.3), 0px 4px 8px 3px rgba(0, 0, 0, 0.15);
+  --md-elevation-4: 0px 2px 3px rgba(0, 0, 0, 0.3), 0px 6px 10px 4px rgba(0, 0, 0, 0.15);
+  --md-elevation-5: 0px 4px 4px rgba(0, 0, 0, 0.3), 0px 8px 12px 6px rgba(0, 0, 0, 0.15);
+  
+  /* Material Design 3 Corner radius */
+  --md-corner-none: 0px;
+  --md-corner-xs: 4px;
+  --md-corner-sm: 8px;
+  --md-corner-md: 12px;
+  --md-corner-lg: 16px;
+  --md-corner-xl: 28px;
+  --md-corner-full: 9999px;
+  
+  /* Material Design 3 State layers */
+  --md-state-hover-opacity: 0.08;
+  --md-state-focus-opacity: 0.12;
+  --md-state-pressed-opacity: 0.12;
+  --md-state-dragged-opacity: 0.16;
+  
+  /* Legacy color mapping for compatibility */
+  --primary-color: var(--md-primary);
+  --primary-dark: var(--md-on-primary-container);
+  --primary-light: var(--md-primary-container);
+  --secondary-color: var(--md-tertiary);
+  --secondary-dark: var(--md-on-tertiary-container);
   --success-color: #10b981;
-  --danger-color: #ef4444;
+  --danger-color: var(--md-error);
   --warning-color: #f59e0b;
   
-  /* Text colors */
-  --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --text-tertiary: #94a3b8;
+  --text-primary: var(--md-on-surface);
+  --text-secondary: var(--md-on-surface-variant);
+  --text-tertiary: var(--md-outline);
   
-  /* Background colors */
-  --background: #f8fafc;
-  --surface: #ffffff;
-  --surface-elevated: #ffffff;
-  --border-color: #e2e8f0;
+  --background: var(--md-background);
+  --surface: var(--md-surface);
+  --surface-elevated: var(--md-surface);
+  --border-color: var(--md-outline-variant);
   
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-sm: var(--md-elevation-1);
+  --shadow: var(--md-elevation-2);
+  --shadow-md: var(--md-elevation-3);
+  --shadow-lg: var(--md-elevation-5);
   
-  /* Spacing */
-  --radius-sm: 6px;
-  --radius: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-sm: var(--md-corner-xs);
+  --radius: var(--md-corner-sm);
+  --radius-lg: var(--md-corner-md);
+  --radius-xl: var(--md-corner-lg);
   
-  /* Transitions */
+  /* Transitions - Material Design motion */
   --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --md-motion-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --md-motion-standard: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark theme colors */
+/* Material Design 3 Dark theme colors */
 [data-theme="dark"] {
-  --primary-color: #3b82f6;
-  --primary-dark: #2563eb;
-  --primary-light: #60a5fa;
-  --secondary-color: #fbbf24;
-  --secondary-dark: #f59e0b;
+  --md-primary: #D0BCFF;
+  --md-on-primary: #381E72;
+  --md-primary-container: #4F378B;
+  --md-on-primary-container: #EADDFF;
+  
+  --md-secondary: #CCC2DC;
+  --md-on-secondary: #332D41;
+  --md-secondary-container: #4A4458;
+  --md-on-secondary-container: #E8DEF8;
+  
+  --md-tertiary: #EFB8C8;
+  --md-on-tertiary: #492532;
+  --md-tertiary-container: #633B48;
+  --md-on-tertiary-container: #FFD8E4;
+  
+  --md-error: #F2B8B5;
+  --md-on-error: #601410;
+  --md-error-container: #8C1D18;
+  --md-on-error-container: #F9DEDC;
+  
+  --md-surface: #141218;
+  --md-on-surface: #E6E0E9;
+  --md-surface-variant: #49454F;
+  --md-on-surface-variant: #CAC4D0;
+  --md-outline: #938F99;
+  --md-outline-variant: #49454F;
+  
+  --md-background: #141218;
+  --md-on-background: #E6E0E9;
+  
+  /* Legacy mapping */
+  --primary-color: var(--md-primary);
+  --primary-dark: var(--md-on-primary);
+  --primary-light: var(--md-primary-container);
+  --secondary-color: var(--md-tertiary);
+  --secondary-dark: var(--md-on-tertiary);
   --success-color: #34d399;
-  --danger-color: #f87171;
+  --danger-color: var(--md-error);
   --warning-color: #fbbf24;
   
-  /* Text colors */
-  --text-primary: #f1f5f9;
-  --text-secondary: #cbd5e1;
-  --text-tertiary: #94a3b8;
+  --text-primary: var(--md-on-surface);
+  --text-secondary: var(--md-on-surface-variant);
+  --text-tertiary: var(--md-outline);
   
-  /* Background colors */
-  --background: #0f172a;
-  --surface: #1e293b;
-  --surface-elevated: #334155;
-  --border-color: #334155;
+  --background: var(--md-background);
+  --surface: var(--md-surface);
+  --surface-elevated: var(--md-surface-variant);
+  --border-color: var(--md-outline-variant);
   
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px -1px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --shadow-sm: var(--md-elevation-1);
+  --shadow: var(--md-elevation-2);
+  --shadow-md: var(--md-elevation-3);
+  --shadow-lg: var(--md-elevation-5);
 }
 
 /* Smooth color transitions for theme switching */
@@ -78,17 +157,20 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  /* Material Design 3 uses Roboto as primary font */
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--background);
   color: var(--text-primary);
-  line-height: 1.6;
+  line-height: 1.5;
   min-height: 100vh;
   /* Prevent horizontal scroll on mobile */
   overflow-x: hidden;
+  font-size: 16px;
+  letter-spacing: 0.5px;
 }
 
 .app-container {
@@ -125,65 +207,101 @@ h2 {
   margin-bottom: 2rem;
 }
 
-/* Buttons */
+/* Material Design 3 Buttons */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.875rem 1.75rem;
+  padding: 10px 24px;
   border: none;
-  border-radius: var(--radius-lg);
-  font-size: 1rem;
-  font-weight: 600;
+  border-radius: var(--md-corner-full);
+  font-size: 14px;
+  font-weight: 500;
   cursor: pointer;
   transition: var(--transition);
   text-decoration: none;
   position: relative;
   overflow: hidden;
-  /* Ensure minimum touch target size */
-  min-height: 44px;
-  /* Improve button appearance */
-  letter-spacing: 0.025em;
+  /* Material Design 3: minimum touch target 48x48dp */
+  min-height: 40px;
+  letter-spacing: 0.1px;
+  text-transform: none;
+  font-family: 'Roboto', sans-serif;
+}
+
+/* Material Design 3: Ripple effect simulation */
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn:active::before {
+  width: 300px;
+  height: 300px;
+  transition: width 0s, height 0s;
 }
 
 .btn:active {
   transform: scale(0.98);
 }
 
+/* Material Design 3: Filled Button (Primary) */
 .btn-primary {
-  background-color: var(--primary-color);
-  color: white;
-  box-shadow: var(--shadow);
+  background-color: var(--md-primary);
+  color: var(--md-on-primary);
+  box-shadow: var(--md-elevation-1);
 }
 
 .btn-primary:hover {
-  background-color: var(--primary-dark);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  background-color: var(--md-primary);
+  box-shadow: var(--md-elevation-2);
+  filter: brightness(1.1);
 }
 
+.btn-primary:active {
+  box-shadow: var(--md-elevation-1);
+}
+
+/* Material Design 3: Filled Tonal Button (Secondary) */
 .btn-secondary {
-  background-color: var(--secondary-color);
-  color: white;
-  box-shadow: var(--shadow);
+  background-color: var(--md-secondary-container);
+  color: var(--md-on-secondary-container);
+  box-shadow: none;
 }
 
 .btn-secondary:hover {
-  background-color: var(--secondary-dark);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--md-elevation-1);
+  filter: brightness(0.95);
 }
 
+.btn-secondary:active {
+  box-shadow: none;
+}
+
+/* Material Design 3: Outlined Button */
 .btn-outline {
   background-color: transparent;
-  color: var(--primary-color);
-  border: 2px solid var(--primary-color);
+  color: var(--md-primary);
+  border: 1px solid var(--md-outline);
+  box-shadow: none;
 }
 
 .btn-outline:hover {
-  background-color: var(--primary-color);
-  color: white;
+  background-color: rgba(103, 80, 164, 0.08);
+  border-color: var(--md-primary);
+}
+
+.btn-outline:active {
+  background-color: rgba(103, 80, 164, 0.12);
 }
 
 .btn .icon {
@@ -201,24 +319,26 @@ h2 {
 /* Form Elements */
 .select {
   padding: 0.875rem 2.5rem 0.875rem 1rem;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius);
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-corner-xs);
   font-size: 1rem;
-  background-color: var(--surface);
-  color: var(--text-primary);
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2349454F' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 1rem center;
   transition: var(--transition);
-  min-height: 44px;
+  min-height: 48px;
+  font-family: 'Roboto', sans-serif;
 }
 
 .select:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: var(--md-primary);
+  border-width: 2px;
+  padding: calc(0.875rem - 1px) 2.5rem calc(0.875rem - 1px) calc(1rem - 1px);
 }
 
 [data-theme="dark"] .select {
@@ -248,19 +368,18 @@ h2 {
 }
 
 .stat-card {
-  background-color: var(--surface);
-  border-radius: var(--radius-lg);
+  background-color: var(--md-surface);
+  border-radius: var(--md-corner-md);
   padding: 1.5rem;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--border-color);
+  box-shadow: var(--md-elevation-1);
+  border: 1px solid var(--md-outline-variant);
   transition: var(--transition);
   cursor: pointer;
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--primary-color);
+  box-shadow: var(--md-elevation-2);
+  border-color: var(--md-outline);
 }
 
 .stat-value {
@@ -437,17 +556,17 @@ h2 {
 }
 
 .exercise-item {
-  background: var(--surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  background: var(--md-surface);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-corner-md);
   padding: 1.5rem;
   margin-bottom: 1rem;
-  box-shadow: var(--shadow);
+  box-shadow: var(--md-elevation-1);
   transition: var(--transition);
 }
 
 .exercise-item:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--md-elevation-2);
 }
 
 .exercise-header {
@@ -523,22 +642,23 @@ h2 {
 
 input[type="number"] {
   padding: 0.75rem;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius);
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-corner-xs);
   font-size: 1rem;
   width: 100%;
-  font-family: inherit;
-  background-color: var(--surface);
-  color: var(--text-primary);
+  font-family: 'Roboto', sans-serif;
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
   transition: var(--transition);
-  /* Better mobile touch target */
-  min-height: 44px;
+  /* Material Design: minimum touch target 48x48dp */
+  min-height: 48px;
 }
 
 input[type="number"]:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: var(--md-primary);
+  border-width: 2px;
+  padding: calc(0.75rem - 1px);
 }
 
 input[type="checkbox"] {
@@ -577,17 +697,16 @@ input[type="checkbox"] {
 }
 
 .history-card {
-  background: var(--surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  background: var(--md-surface);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-corner-md);
   padding: 1.5rem;
-  box-shadow: var(--shadow);
+  box-shadow: var(--md-elevation-1);
   transition: var(--transition);
 }
 
 .history-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  box-shadow: var(--md-elevation-2);
 }
 
 .history-header {
@@ -723,12 +842,12 @@ input[type="checkbox"] {
 }
 
 .settings-section {
-  background: var(--surface);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  background: var(--md-surface);
+  border: 1px solid var(--md-outline-variant);
+  border-radius: var(--md-corner-md);
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: var(--shadow);
+  box-shadow: var(--md-elevation-1);
 }
 
 .settings-section h2 {
@@ -778,17 +897,17 @@ input[type="checkbox"] {
 }
 
 .modal-content {
-  background: var(--surface);
-  border-radius: var(--radius-xl);
+  background: var(--md-surface);
+  border-radius: var(--md-corner-xl);
   max-width: 600px;
   width: 90%;
   max-height: 90vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--md-elevation-5);
   animation: slideUp 0.3s ease-out;
-  border: 1px solid var(--border-color);
+  border: none;
 }
 
 @keyframes slideUp {
@@ -864,20 +983,21 @@ input[type="checkbox"] {
 .form-input {
   width: 100%;
   padding: 0.875rem;
-  border: 2px solid var(--border-color);
-  border-radius: var(--radius);
+  border: 1px solid var(--md-outline);
+  border-radius: var(--md-corner-xs);
   font-size: 1rem;
-  font-family: inherit;
-  background-color: var(--surface);
-  color: var(--text-primary);
+  font-family: 'Roboto', sans-serif;
+  background-color: var(--md-surface);
+  color: var(--md-on-surface);
   transition: var(--transition);
-  min-height: 44px;
+  min-height: 48px;
 }
 
 .form-input:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: var(--md-primary);
+  border-width: 2px;
+  padding: calc(0.875rem - 1px);
 }
 
 .exercise-selection-list {
@@ -1001,6 +1121,110 @@ input[type="checkbox"] {
   display: inline-block;
 }
 
+/* Material Design 3: Bottom Navigation Bar (Mobile) */
+.bottom-nav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background-color: var(--md-surface);
+  border-top: 1px solid var(--md-outline-variant);
+  box-shadow: 0px -1px 3px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  padding: 0;
+  height: 80px;
+}
+
+.bottom-nav-items {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  height: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 0;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  color: var(--md-on-surface-variant);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  min-height: 48px;
+  text-decoration: none;
+}
+
+.bottom-nav-item:active {
+  background-color: rgba(103, 80, 164, 0.12);
+}
+
+.bottom-nav-item.active {
+  color: var(--md-on-secondary-container);
+}
+
+.bottom-nav-item .nav-icon {
+  width: 24px;
+  height: 24px;
+  transition: var(--transition);
+}
+
+.bottom-nav-item.active .nav-icon-container {
+  background-color: var(--md-secondary-container);
+  padding: 4px 20px;
+  border-radius: var(--md-corner-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Material Design 3: Floating Action Button (FAB) */
+.fab {
+  position: fixed;
+  bottom: 96px;
+  right: 16px;
+  width: 56px;
+  height: 56px;
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border: none;
+  border-radius: var(--md-corner-lg);
+  box-shadow: var(--md-elevation-3);
+  cursor: pointer;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+  z-index: 99;
+}
+
+.fab:hover {
+  box-shadow: var(--md-elevation-4);
+  transform: scale(1.05);
+}
+
+.fab:active {
+  box-shadow: var(--md-elevation-2);
+  transform: scale(0.95);
+}
+
+.fab svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .program-list {
@@ -1014,5 +1238,20 @@ input[type="checkbox"] {
   
   .tab-button {
     white-space: nowrap;
+  }
+  
+  /* Show bottom navigation on mobile */
+  .bottom-nav {
+    display: block;
+  }
+  
+  /* Add padding to main content to prevent overlap with bottom nav */
+  .main-content {
+    padding-bottom: 96px;
+  }
+  
+  /* Show FAB on mobile */
+  .fab {
+    display: flex;
   }
 }
