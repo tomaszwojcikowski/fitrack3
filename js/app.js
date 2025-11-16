@@ -28,7 +28,9 @@ import {
   getMobilityFlowById,
   addExerciseInstance,
   getExerciseInstancesByTemplateId,
-  getExerciseInstancesByPhase
+  getExerciseInstancesByPhase,
+  // Database availability checking
+  checkDatabaseAvailability
 } from './database.js';
 
 // Import the 20-week program seeder
@@ -68,13 +70,30 @@ export default {
       programs: [],
       programsProgress: {},
       activeProgram: null,
-      currentTab: 'templates'
+      currentTab: 'templates',
+      dbAvailable: true,
+      dbError: null
     };
   },
   
   async mounted() {
+    // Check if database is available (handles private browsing mode on mobile)
+    this.dbAvailable = await checkDatabaseAvailability();
+    
+    if (!this.dbAvailable) {
+      this.dbError = 'Database is not available. This may be due to private browsing mode or browser restrictions. Some features may not work properly.';
+      console.warn(this.dbError);
+      this.loading = false;
+      return;
+    }
+    
     // Seed database with initial data if needed
-    await seedDatabase();
+    try {
+      await seedDatabase();
+    } catch (error) {
+      console.error('Error seeding database:', error);
+      this.dbError = 'Failed to initialize database. Please refresh the page.';
+    }
     
     // Seed 20-week program if not already present
     try {
@@ -84,14 +103,20 @@ export default {
     }
     
     // Load exercises, templates, history, settings, programs, and version info
-    await Promise.all([
-      this.loadExercises(),
-      this.loadTemplates(),
-      this.loadWorkoutHistory(),
-      this.loadSettings(),
-      this.loadPrograms(),
-      this.loadVersionInfo()
-    ]);
+    try {
+      await Promise.all([
+        this.loadExercises(),
+        this.loadTemplates(),
+        this.loadWorkoutHistory(),
+        this.loadSettings(),
+        this.loadPrograms(),
+        this.loadVersionInfo()
+      ]);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      this.dbError = 'Failed to load data from database. Please refresh the page.';
+    }
+    
     this.loading = false;
   },
   
@@ -749,6 +774,14 @@ export default {
         :current-view="currentView"
         @navigate="navigate($event.detail.view)"
       ></nav-bar>
+      
+      <!-- Database Error Banner -->
+      <div v-if="!dbAvailable || dbError" class="db-error-banner">
+        <svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+          <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+        </svg>
+        <span>{{ dbError || 'Database unavailable. App may not work properly in private browsing mode.' }}</span>
+      </div>
       
       <main class="main-content">
         <div v-if="currentView === 'home'" class="view-home">
