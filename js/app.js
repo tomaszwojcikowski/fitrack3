@@ -31,6 +31,9 @@ import {
   getExerciseInstancesByPhase
 } from './database.js';
 
+// Import the 20-week program seeder
+import { seed20WeekProgram } from './seed-20week-program.js';
+
 // Import Web Components
 import './components/exercise-card.js';
 import './components/nav-bar.js';
@@ -72,6 +75,13 @@ export default {
   async mounted() {
     // Seed database with initial data if needed
     await seedDatabase();
+    
+    // Seed 20-week program if not already present
+    try {
+      await seed20WeekProgram();
+    } catch (error) {
+      console.error('Error seeding 20-week program:', error);
+    }
     
     // Load exercises, templates, history, settings, programs, and version info
     await Promise.all([
@@ -509,18 +519,24 @@ export default {
       try {
         const programs = await getAllPrograms();
         
-        // Load progress for each program
-        const progressPromises = programs.map(async (program) => {
+        // Load progress and blocks for each program
+        const dataPromises = programs.map(async (program) => {
           const progress = await getProgramProgress(program.id);
-          return { programId: program.id, progress };
+          const blocks = await getBlocksByProgramId(program.id);
+          return { programId: program.id, progress, blocks };
         });
         
-        const progressResults = await Promise.all(progressPromises);
+        const dataResults = await Promise.all(dataPromises);
         
         // Create progress lookup object
         this.programsProgress = {};
-        progressResults.forEach(({ programId, progress }) => {
+        dataResults.forEach(({ programId, progress, blocks }) => {
           this.programsProgress[programId] = progress;
+          // Attach blocks to the program object
+          const program = programs.find(p => p.id === programId);
+          if (program) {
+            program.blocks = blocks;
+          }
         });
         
         this.programs = programs;
