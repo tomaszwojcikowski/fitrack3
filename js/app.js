@@ -426,7 +426,7 @@ export default {
     <div class="app-container">
       <nav-bar 
         :current-view="currentView"
-        @navigate="navigate"
+        @navigate="navigate($event.detail.view)"
       ></nav-bar>
       
       <main class="main-content">

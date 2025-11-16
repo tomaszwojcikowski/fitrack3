@@ -18,9 +18,11 @@
   </script>
 
   <!-- Test files -->
-  <script type="module" src="./database.test.js"></script>
-
-  <script type="module" class="mocha-exec">
+  <script type="module">
+    // Import test file first, then run mocha
+    import './database.test.js';
+    // Give a small delay to ensure all tests are registered
+    await new Promise(resolve => setTimeout(resolve, 100));
     mocha.run();
   </script>
 </body>
