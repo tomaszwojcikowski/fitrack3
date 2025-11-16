@@ -5,9 +5,9 @@ template.innerHTML = `
     /* Encapsulated styles via Shadow DOM */
     :host {
       display: block;
-      background: #1976d2;
+      background: var(--primary-color, #1976d2);
       color: white;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow, 0 2px 4px rgba(0, 0, 0, 0.1));
     }
     
     .navbar {

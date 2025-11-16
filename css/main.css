@@ -566,7 +566,7 @@ input[type="checkbox"] {
 }
 
 .add-set-btn:hover {
-  background-color: #e3f2fd;
+  background-color: rgba(59, 130, 246, 0.1);
 }
 
 /* History View */
@@ -656,8 +656,8 @@ input[type="checkbox"] {
 .exercise-tag {
   display: inline-block;
   padding: 0.25rem 0.75rem;
-  background-color: #e3f2fd;
-  color: var(--primary-color);
+  background-color: rgba(59, 130, 246, 0.15);
+  color: var(--primary-light);
   border-radius: 4px;
   font-size: 0.875rem;
   font-weight: 500;
@@ -964,7 +964,7 @@ input[type="checkbox"] {
 
 .tab-button:hover {
   color: var(--text-primary);
-  background: rgba(0, 0, 0, 0.02);
+  background: rgba(37, 99, 235, 0.05);
 }
 
 .tab-button.active {
@@ -992,11 +992,11 @@ input[type="checkbox"] {
 /* Program Context in Workout */
 .program-context {
   font-size: 0.9rem;
-  color: var(--primary-color);
+  color: var(--primary-light);
   font-weight: 600;
   margin: 0.25rem 0;
   padding: 4px 8px;
-  background: rgba(25, 118, 210, 0.1);
+  background: rgba(59, 130, 246, 0.15);
   border-radius: 4px;
   display: inline-block;
 }

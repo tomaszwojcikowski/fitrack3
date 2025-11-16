@@ -30,17 +30,17 @@ class ProgramCard extends HTMLElement {
         }
         
         .program-card {
-          background: white;
-          border: 1px solid #e0e0e0;
+          background: var(--surface, white);
+          border: 1px solid var(--border-color, #e0e0e0);
           border-radius: 8px;
           padding: 20px;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          box-shadow: var(--shadow, 0 2px 4px rgba(0, 0, 0, 0.1));
           transition: transform 0.2s, box-shadow 0.2s;
         }
         
         .program-card:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+          box-shadow: var(--shadow-md, 0 4px 8px rgba(0, 0, 0, 0.15));
         }
         
         .program-header {
@@ -51,12 +51,12 @@ class ProgramCard extends HTMLElement {
           font-size: 1.25rem;
           font-weight: 600;
           margin: 0 0 8px 0;
-          color: #333;
+          color: var(--text-primary, #333);
         }
         
         .program-description {
           font-size: 0.9rem;
-          color: #666;
+          color: var(--text-secondary, #666);
           margin: 0 0 16px 0;
           line-height: 1.4;
         }
@@ -76,7 +76,7 @@ class ProgramCard extends HTMLElement {
         
         .info-label {
           font-size: 0.75rem;
-          color: #888;
+          color: var(--text-tertiary, #888);
           text-transform: uppercase;
           letter-spacing: 0.5px;
         }
@@ -84,19 +84,20 @@ class ProgramCard extends HTMLElement {
         .info-value {
           font-size: 1rem;
           font-weight: 600;
-          color: #333;
+          color: var(--text-primary, #333);
         }
         
         .progress-info {
-          background: #f5f5f5;
+          background: var(--background, #f5f5f5);
           padding: 12px;
           border-radius: 6px;
           margin-bottom: 16px;
+          border: 1px solid var(--border-color, #e0e0e0);
         }
         
         .progress-label {
           font-size: 0.75rem;
-          color: #888;
+          color: var(--text-tertiary, #888);
           text-transform: uppercase;
           letter-spacing: 0.5px;
           margin-bottom: 4px;
@@ -105,7 +106,7 @@ class ProgramCard extends HTMLElement {
         .progress-value {
           font-size: 1rem;
           font-weight: 600;
-          color: #4CAF50;
+          color: var(--success-color, #4CAF50);
         }
         
         .program-actions {
@@ -127,7 +128,7 @@ class ProgramCard extends HTMLElement {
         }
         
         .btn-start {
-          background: #4CAF50;
+          background: var(--success-color, #4CAF50);
           color: white;
         }
         
@@ -136,25 +137,26 @@ class ProgramCard extends HTMLElement {
         }
         
         .btn-continue {
-          background: #2196F3;
+          background: var(--primary-color, #2196F3);
           color: white;
         }
         
         .btn-continue:hover {
-          background: #0b7dda;
+          background: var(--primary-dark, #0b7dda);
         }
         
         .btn-view {
-          background: #f5f5f5;
-          color: #333;
+          background: var(--background, #f5f5f5);
+          color: var(--text-primary, #333);
+          border: 1px solid var(--border-color, #e0e0e0);
         }
         
         .btn-view:hover {
-          background: #e0e0e0;
+          background: var(--surface-elevated, #e0e0e0);
         }
         
         .btn-reset {
-          background: #ff9800;
+          background: var(--warning-color, #ff9800);
           color: white;
         }
         

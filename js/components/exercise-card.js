@@ -5,16 +5,16 @@ template.innerHTML = `
     /* Encapsulated styles via Shadow DOM */
     :host {
       display: block;
-      border: 1px solid #e0e0e0;
+      border: 1px solid var(--border-color, #e0e0e0);
       border-radius: 8px;
       padding: 1rem;
-      background: white;
+      background: var(--surface, white);
       transition: transform 0.2s, box-shadow 0.2s;
     }
     
     :host(:hover) {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
     }
     
     .card-header {
@@ -27,7 +27,7 @@ template.innerHTML = `
     h3 {
       margin: 0;
       font-size: 1.125rem;
-      color: #1a1a1a;
+      color: var(--text-primary, #1a1a1a);
       font-weight: 600;
     }
     
@@ -42,13 +42,13 @@ template.innerHTML = `
     }
     
     .badge.compound {
-      background-color: #e3f2fd;
-      color: #1976d2;
+      background-color: rgba(59, 130, 246, 0.15);
+      color: var(--primary-light, #3b82f6);
     }
     
     .badge.isolation {
-      background-color: #f3e5f5;
-      color: #7b1fa2;
+      background-color: rgba(168, 85, 247, 0.15);
+      color: #a855f7;
     }
     
     .card-body {
@@ -62,20 +62,20 @@ template.innerHTML = `
       align-items: center;
       gap: 0.5rem;
       font-size: 0.875rem;
-      color: #666;
+      color: var(--text-secondary, #666);
     }
     
     .detail-label {
       font-weight: 500;
-      color: #333;
+      color: var(--text-primary, #333);
     }
     
     .muscle-group {
-      color: #2196f3;
+      color: var(--primary-light, #3b82f6);
     }
     
     .equipment {
-      color: #ff9800;
+      color: var(--secondary-color, #ff9800);
     }
   </style>
   
