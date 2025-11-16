@@ -16,19 +16,16 @@ test.describe('FiTrack3 Web Application', () => {
   test('should navigate to exercise library', async ({ page }) => {
     await page.goto('/');
     
-    // Click on the Library navigation link
-    const navBar = page.locator('nav-bar');
-    await navBar.evaluate((el) => {
-      const shadowRoot = el.shadowRoot;
+    // Click on the Library navigation link using evaluate which returns inside shadow DOM
+    await page.evaluate(() => {
+      const navBar = document.querySelector('nav-bar');
+      const shadowRoot = navBar.shadowRoot;
       const libraryLink = shadowRoot.querySelector('[data-view="library"]');
       libraryLink.click();
     });
     
-    // Wait a bit for Vue to update
-    await page.waitForTimeout(500);
-    
-    // Check that the library view is shown
-    await expect(page.locator('h1')).toContainText('Exercise Library');
+    // Wait for the library view heading to appear
+    await expect(page.locator('h1')).toContainText('Exercise Library', { timeout: 10000 });
   });
   
   test('should display seeded exercises in the library', async ({ page }) => {
@@ -121,26 +118,24 @@ test.describe('FiTrack3 Web Application', () => {
     
     // Navigate to workout
     await page.click('text=Start Workout');
-    await page.waitForTimeout(300);
-    await expect(page.locator('h1')).toContainText('Start Workout');
+    await expect(page.locator('h1')).toContainText('Start Workout', { timeout: 10000 });
     
     // Navigate to library via nav bar
-    const navBar = page.locator('nav-bar');
-    await navBar.evaluate((el) => {
-      const shadowRoot = el.shadowRoot;
+    await page.evaluate(() => {
+      const navBar = document.querySelector('nav-bar');
+      const shadowRoot = navBar.shadowRoot;
       const libraryLink = shadowRoot.querySelector('[data-view="library"]');
       libraryLink.click();
     });
-    await page.waitForTimeout(300);
-    await expect(page.locator('h1')).toContainText('Exercise Library');
+    await expect(page.locator('h1')).toContainText('Exercise Library', { timeout: 10000 });
     
     // Navigate back to home via nav bar
-    await navBar.evaluate((el) => {
-      const shadowRoot = el.shadowRoot;
+    await page.evaluate(() => {
+      const navBar = document.querySelector('nav-bar');
+      const shadowRoot = navBar.shadowRoot;
       const homeLink = shadowRoot.querySelector('[data-view="home"]');
       homeLink.click();
     });
-    await page.waitForTimeout(300);
-    await expect(page.locator('h1')).toContainText('Welcome to FiTrack3');
+    await expect(page.locator('h1')).toContainText('Welcome to FiTrack3', { timeout: 10000 });
   });
 });

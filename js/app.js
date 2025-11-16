@@ -44,7 +44,8 @@ export default {
       settings: {
         weightUnit: 'lbs',
         theme: 'light'
-      }
+      },
+      versionInfo: null
     };
   },
   
@@ -52,12 +53,13 @@ export default {
     // Seed database with initial data if needed
     await seedDatabase();
     
-    // Load exercises, templates, history, and settings
+    // Load exercises, templates, history, settings, and version info
     await Promise.all([
       this.loadExercises(),
       this.loadTemplates(),
       this.loadWorkoutHistory(),
-      this.loadSettings()
+      this.loadSettings(),
+      this.loadVersionInfo()
     ]);
     this.loading = false;
   },
@@ -397,8 +399,27 @@ export default {
         console.error('Failed to save settings:', error);
         alert('Failed to save settings');
       }
+    },
+    
+    async loadVersionInfo() {
+      try {
+        const response = await fetch('./version.json');
+        if (response.ok) {
+          this.versionInfo = await response.json();
+        }
+      } catch (error) {
+        console.error('Failed to load version info:', error);
+        // Set default version info if fetch fails
+        this.versionInfo = {
+          version: '1.0.0',
+          commit: 'unknown',
+          commitShort: 'unknown',
+          branch: 'unknown',
+          buildDate: 'unknown',
+          buildNumber: '0'
+        };
+      }
     }
-  }
   },
   
   template: `
@@ -758,8 +779,22 @@ export default {
               <p class="about-text">
                 Built with Vue.js 3, Web Components, and Dexie.js (IndexedDB wrapper).
               </p>
-              <p class="about-text">
-                Version 1.0.0
+              <div v-if="versionInfo" class="version-info">
+                <p class="about-text">
+                  <strong>Version:</strong> {{ versionInfo.version }}
+                </p>
+                <p class="about-text">
+                  <strong>Build:</strong> #{{ versionInfo.buildNumber }}
+                </p>
+                <p class="about-text">
+                  <strong>Commit:</strong> {{ versionInfo.commitShort }}
+                </p>
+                <p class="about-text">
+                  <strong>Build Date:</strong> {{ new Date(versionInfo.buildDate).toLocaleDateString() }}
+                </p>
+              </div>
+              <p v-else class="about-text">
+                Version 1.0.0-dev
               </p>
             </div>
             

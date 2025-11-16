@@ -19,12 +19,54 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Build job (not needed for static files, but kept for consistency)
+  # Test job - verify app works before deploying
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright tests
+        run: npx playwright test
+
+      - name: Upload test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+  # Build job - generate version and prepare for deployment
   build:
     runs-on: ubuntu-latest
+    needs: test
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Generate version file
+        run: |
+          echo "{" > version.json
+          echo "  \"version\": \"1.0.0\"," >> version.json
+          echo "  \"commit\": \"${{ github.sha }}\"," >> version.json
+          echo "  \"commitShort\": \"${GITHUB_SHA:0:7}\"," >> version.json
+          echo "  \"branch\": \"${{ github.ref_name }}\"," >> version.json
+          echo "  \"buildDate\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"," >> version.json
+          echo "  \"buildNumber\": \"${{ github.run_number }}\"" >> version.json
+          echo "}" >> version.json
+          cat version.json
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
