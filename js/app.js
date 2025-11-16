@@ -118,8 +118,12 @@ export default {
             this.currentView = view;
             // Load data when navigating to specific views
             if (view === 'templates') {
+              this.currentTab = 'templates';
               this.loadTemplates();
+            } else if (view === 'programs') {
+              this.currentTab = 'programs';
               this.loadPrograms();
+              this.loadTemplates(); // Need templates for program schedule
             } else if (view === 'history') {
               this.loadWorkoutHistory();
             } else if (view === 'settings') {
@@ -138,8 +142,12 @@ export default {
         // Fallback without animation
         this.currentView = view;
         if (view === 'templates') {
+          this.currentTab = 'templates';
           this.loadTemplates();
+        } else if (view === 'programs') {
+          this.currentTab = 'programs';
           this.loadPrograms();
+          this.loadTemplates(); // Need templates for program schedule
         } else if (view === 'history') {
           this.loadWorkoutHistory();
         } else if (view === 'settings') {
@@ -439,14 +447,27 @@ export default {
             theme: savedSettings.theme || 'light'
           };
         }
+        // Apply theme immediately
+        this.applyTheme(this.settings.theme);
       } catch (error) {
         console.error('Failed to load settings:', error);
       }
     },
     
+    applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+    },
+    
+    toggleTheme() {
+      this.settings.theme = this.settings.theme === 'light' ? 'dark' : 'light';
+      this.applyTheme(this.settings.theme);
+      this.saveSettings();
+    },
+    
     async saveSettings() {
       try {
         await saveUserSettings('default', this.settings);
+        this.applyTheme(this.settings.theme);
         alert('Settings saved successfully!');
       } catch (error) {
         console.error('Failed to save settings:', error);
@@ -730,75 +751,54 @@ export default {
           </div>
         </div>
         
-        <div v-if="currentView === 'templates'" class="view-templates">
+        <div v-if="currentView === 'programs'" class="view-programs">
           <header class="view-header">
-            <h1>Programs & Templates</h1>
+            <h1>Training Programs</h1>
           </header>
           
-          <!-- Tab Navigation -->
-          <div class="tabs">
-            <button 
-              class="tab-button" 
-              :class="{ active: currentTab === 'programs' }"
-              @click="currentTab = 'programs'"
-            >
-              Programs
-            </button>
-            <button 
-              class="tab-button" 
-              :class="{ active: currentTab === 'templates' }"
-              @click="currentTab = 'templates'"
-            >
-              Templates
-            </button>
+          <div v-if="loading" class="loading">Loading programs...</div>
+          
+          <div v-else-if="programs.length === 0" class="empty-state">
+            <p>No programs available yet.</p>
           </div>
           
-          <!-- Programs Tab -->
-          <div v-if="currentTab === 'programs'" class="tab-content">
-            <div v-if="loading" class="loading">Loading programs...</div>
-            
-            <div v-else-if="programs.length === 0" class="empty-state">
-              <p>No programs available yet.</p>
-            </div>
-            
-            <div v-else class="program-list">
-              <program-card
-                v-for="program in programs"
-                :key="program.id"
-                :program="JSON.stringify(program)"
-                :progress="JSON.stringify(programsProgress[program.id])"
-                @program-action="handleProgramAction"
-              ></program-card>
-            </div>
+          <div v-else class="program-list">
+            <program-card
+              v-for="program in programs"
+              :key="program.id"
+              :program="JSON.stringify(program)"
+              :progress="JSON.stringify(programsProgress[program.id])"
+              @program-action="handleProgramAction"
+            ></program-card>
+          </div>
+        </div>
+        
+        <div v-if="currentView === 'templates'" class="view-templates">
+          <header class="view-header">
+            <h1>Workout Templates</h1>
+            <button @click="openTemplateForm()" class="btn btn-primary">
+              <svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+                <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              </svg>
+              Create Template
+            </button>
+          </header>
+          
+          <div v-if="loading" class="loading">Loading templates...</div>
+          
+          <div v-else-if="templates.length === 0" class="empty-state">
+            <p>No workout templates yet. Create your first template to get started!</p>
           </div>
           
-          <!-- Templates Tab -->
-          <div v-if="currentTab === 'templates'" class="tab-content">
-            <div class="tab-header">
-              <button @click="openTemplateForm()" class="btn btn-primary">
-                <svg class="icon" viewBox="0 0 24 24" width="20" height="20">
-                  <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                </svg>
-                Create Template
-              </button>
-            </div>
-            
-            <div v-if="loading" class="loading">Loading templates...</div>
-            
-            <div v-else-if="templates.length === 0" class="empty-state">
-              <p>No workout templates yet. Create your first template to get started!</p>
-            </div>
-            
-            <div v-else class="template-list">
-              <template-card
-                v-for="template in templates"
-                :key="template.id"
-                :template="template"
-                @template-start="handleTemplateStart(template.id)"
-                @template-edit="handleTemplateEdit(template.id)"
-                @template-delete="handleTemplateDelete(template.id)"
-              ></template-card>
-            </div>
+          <div v-else class="template-list">
+            <template-card
+              v-for="template in templates"
+              :key="template.id"
+              :template="template"
+              @template-start="handleTemplateStart(template.id)"
+              @template-edit="handleTemplateEdit(template.id)"
+              @template-delete="handleTemplateDelete(template.id)"
+            ></template-card>
           </div>
           
           <!-- Template Form Modal -->
@@ -1041,11 +1041,19 @@ export default {
               <h2>Appearance</h2>
               <div class="form-group">
                 <label for="theme">Theme</label>
-                <select id="theme" v-model="settings.theme" class="select">
-                  <option value="light">Light</option>
-                  <option value="dark">Dark (Coming Soon)</option>
+                <select id="theme" v-model="settings.theme" @change="applyTheme(settings.theme)" class="select">
+                  <option value="light">Light Mode</option>
+                  <option value="dark">Dark Mode</option>
                 </select>
                 <p class="form-help">Choose your preferred color theme</p>
+              </div>
+              <div class="form-group">
+                <button @click="toggleTheme" class="btn btn-outline" style="width: 100%;">
+                  <svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+                    <path fill="currentColor" d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>
+                  </svg>
+                  Toggle Theme
+                </button>
               </div>
             </div>
             
