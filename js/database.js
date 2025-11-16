@@ -1,5 +1,5 @@
 // Import Dexie from local ESM build
-import Dexie from '/vendor/dexie.js';
+import Dexie from '../vendor/dexie.js';
 
 // 1. Initialize the database
 const db = new Dexie('WorkoutAppDB');
