@@ -1,12 +1,21 @@
 import { test, expect } from '@playwright/test';
 
 test('Run in-browser Mocha unit tests', async ({ page }) => {
+  // Listen for console messages
+  page.on('console', msg => console.log('Browser console:', msg.text()));
+  
+  // Listen for page errors
+  page.on('pageerror', err => console.error('Page error:', err.message));
+  
   // 1. Go to the local URL for the test runner
   await page.goto('/test/test.html');
   
-  // 2. Wait for Mocha to finish
-  // We poll the DOM for the '#mocha-stats' element
-  await page.waitForSelector('.failures', { timeout: 30000 });
+  // 2. Wait for Mocha to finish running all tests
+  // Wait for the test run to complete (look for the stats that appear after run)
+  await page.waitForSelector('.passes em', { timeout: 30000 });
+  
+  // Add a small delay to ensure all async tests have completed
+  await page.waitForTimeout(2000);
   
   // 3. Check the "failures" count in the report
   const failuresElement = await page.locator('.failures em');
