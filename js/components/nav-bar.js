@@ -5,9 +5,9 @@ template.innerHTML = `
     /* Encapsulated styles via Shadow DOM */
     :host {
       display: block;
-      background: var(--primary-color, #1976d2);
-      color: white;
-      box-shadow: var(--shadow, 0 2px 4px rgba(0, 0, 0, 0.1));
+      background: var(--md-surface, #FEF7FF);
+      color: var(--md-on-surface, #1D1B20);
+      box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.3), 0px 1px 3px 1px rgba(0, 0, 0, 0.15);
     }
     
     .navbar {
@@ -24,12 +24,14 @@ template.innerHTML = `
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      font-size: 1.5rem;
-      font-weight: 700;
+      font-size: 1.375rem;
+      font-weight: 500;
       cursor: pointer;
       user-select: none;
       z-index: 11;
       transition: transform 0.2s;
+      font-family: 'Roboto', sans-serif;
+      color: var(--md-primary, #6750A4);
     }
     
     .brand:hover {
@@ -37,8 +39,8 @@ template.innerHTML = `
     }
     
     .brand-icon {
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
     }
     
     .nav-links {
@@ -51,46 +53,49 @@ template.innerHTML = `
     
     .nav-link {
       padding: 0.5rem 1rem;
-      border-radius: 4px;
+      border-radius: 20px;
       cursor: pointer;
       transition: background-color 0.2s;
       font-weight: 500;
       user-select: none;
       white-space: nowrap;
+      font-family: 'Roboto', sans-serif;
+      color: var(--md-on-surface-variant, #49454F);
     }
     
     .nav-link:hover {
-      background-color: rgba(255, 255, 255, 0.1);
+      background-color: rgba(103, 80, 164, 0.08);
     }
     
     .nav-link.active {
-      background-color: rgba(255, 255, 255, 0.2);
+      background-color: var(--md-secondary-container, #E8DEF8);
+      color: var(--md-on-secondary-container, #1D192B);
     }
     
     .menu-toggle {
       display: none;
       background: none;
       border: none;
-      color: white;
+      color: var(--md-on-surface, #1D1B20);
       font-size: 1.75rem;
       cursor: pointer;
       padding: 0.5rem;
       z-index: 11;
       line-height: 1;
-      width: 44px;
-      height: 44px;
+      width: 48px;
+      height: 48px;
       align-items: center;
       justify-content: center;
-      border-radius: 8px;
+      border-radius: 50%;
       transition: all 0.2s;
     }
     
     .menu-toggle:hover {
-      background-color: rgba(255, 255, 255, 0.15);
-      transform: scale(1.05);
+      background-color: rgba(103, 80, 164, 0.08);
     }
     
     .menu-toggle:active {
+      background-color: rgba(103, 80, 164, 0.12);
       transform: scale(0.95);
     }
     
@@ -108,24 +113,11 @@ template.innerHTML = `
       }
       
       .nav-links {
-        position: fixed;
-        top: 0;
-        right: -100%;
-        width: 70%;
-        max-width: 300px;
-        height: 100vh;
-        background: #1565c0;
-        flex-direction: column;
-        padding: 5rem 0 2rem;
-        gap: 0;
-        box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
-        transition: right 0.3s ease-in-out;
-        z-index: 10;
-        overflow-y: auto;
+        display: none;
       }
       
       .nav-links.open {
-        right: 0;
+        display: none;
       }
       
       .nav-link {
@@ -134,19 +126,20 @@ template.innerHTML = `
         border-radius: 0;
         width: 100%;
         text-align: left;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        /* Ensure proper touch target size */
+        border-bottom: 1px solid var(--md-outline-variant, #CAC4D0);
+        /* Material Design: minimum touch target 48x48dp */
         min-height: 48px;
         display: flex;
         align-items: center;
       }
       
       .nav-link:hover {
-        background-color: rgba(255, 255, 255, 0.15);
+        background-color: rgba(103, 80, 164, 0.08);
       }
       
       .nav-link.active {
-        background-color: rgba(255, 255, 255, 0.25);
+        background-color: var(--md-secondary-container, #E8DEF8);
+        color: var(--md-on-secondary-container, #1D192B);
       }
     }
     
@@ -173,7 +166,7 @@ template.innerHTML = `
   <div class="overlay"></div>
   <nav class="navbar">
     <div class="brand" data-view="home">
-      <svg class="brand-icon" viewBox="0 0 24 24" fill="white">
+      <svg class="brand-icon" viewBox="0 0 24 24" fill="currentColor">
         <path d="M20.57 14.86L22 13.43 20.57 12 17 15.57 8.43 7 12 3.43 10.57 2 9.14 3.43 7.71 2 5.57 4.14 4.14 2.71 2.71 4.14l1.43 1.43L2 7.71l1.43 1.43L2 10.57 3.43 12 7 8.43 15.57 17 12 20.57 13.43 22l1.43-1.43L16.29 22l2.14-2.14 1.43 1.43 1.43-1.43-1.43-1.43L22 16.29z"/>
       </svg>
       <span>FiTrack3</span>
