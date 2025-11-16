@@ -13,7 +13,13 @@ import {
   getWorkoutLogs,
   getLogPerformance,
   getUserSettings,
-  saveUserSettings
+  saveUserSettings,
+  getAllPrograms,
+  getProgramById,
+  getProgramProgress,
+  updateProgramProgress,
+  resetProgramProgress,
+  getTemplateById
 } from './database.js';
 
 // Import Web Components
@@ -21,6 +27,7 @@ import './components/exercise-card.js';
 import './components/nav-bar.js';
 import './components/template-card.js';
 import './components/workout-session.js';
+import './components/program-card.js';
 
 export default {
   data() {
@@ -45,7 +52,11 @@ export default {
         weightUnit: 'lbs',
         theme: 'light'
       },
-      versionInfo: null
+      versionInfo: null,
+      programs: [],
+      programsProgress: {},
+      activeProgram: null,
+      currentTab: 'templates'
     };
   },
   
@@ -53,12 +64,13 @@ export default {
     // Seed database with initial data if needed
     await seedDatabase();
     
-    // Load exercises, templates, history, settings, and version info
+    // Load exercises, templates, history, settings, programs, and version info
     await Promise.all([
       this.loadExercises(),
       this.loadTemplates(),
       this.loadWorkoutHistory(),
       this.loadSettings(),
+      this.loadPrograms(),
       this.loadVersionInfo()
     ]);
     this.loading = false;
@@ -107,6 +119,7 @@ export default {
             // Load data when navigating to specific views
             if (view === 'templates') {
               this.loadTemplates();
+              this.loadPrograms();
             } else if (view === 'history') {
               this.loadWorkoutHistory();
             } else if (view === 'settings') {
@@ -126,6 +139,7 @@ export default {
         this.currentView = view;
         if (view === 'templates') {
           this.loadTemplates();
+          this.loadPrograms();
         } else if (view === 'history') {
           this.loadWorkoutHistory();
         } else if (view === 'settings') {
@@ -225,36 +239,7 @@ export default {
     },
     
     async handleTemplateStart(templateId) {
-      const template = this.templates.find(t => t.id === templateId);
-      if (!template) return;
-      
-      // Initialize workout session
-      this.activeWorkout = {
-        templateId: template.id,
-        templateName: template.name,
-        startTime: new Date().toISOString(),
-        exercises: []
-      };
-      
-      // Load exercises for this workout
-      const exercises = await Promise.all(
-        (template.exerciseIds || []).map(id => getExerciseById(id))
-      );
-      
-      // Initialize workout exercises with empty sets
-      this.workoutExercises = exercises.filter(ex => ex).map(exercise => ({
-        exerciseId: exercise.id,
-        exerciseName: exercise.name,
-        muscleGroup: exercise.muscleGroup,
-        sets: [
-          { setNumber: 1, reps: '', weight: '', completed: false },
-          { setNumber: 2, reps: '', weight: '', completed: false },
-          { setNumber: 3, reps: '', weight: '', completed: false }
-        ]
-      }));
-      
-      // Navigate to workout view
-      this.currentView = 'workout';
+      await this.startWorkoutFromTemplate(templateId);
     },
     
     async handleTemplateEdit(templateId) {
@@ -317,17 +302,84 @@ export default {
         const logData = {
           date: this.activeWorkout.startTime,
           templateId: this.activeWorkout.templateId,
+          programId: this.activeWorkout.programId || null,
+          week: this.activeWorkout.week || null,
+          day: this.activeWorkout.day || null,
           performance: performance
         };
         
         await addWorkoutLog(logData);
         
+        // If this was part of a program, advance to next day
+        if (this.activeWorkout.programId) {
+          await this.advanceProgram(this.activeWorkout.programId, this.activeWorkout.week, this.activeWorkout.day);
+        }
+        
         alert('Workout saved successfully!');
-        this.cancelWorkout();
+        
+        // Clear workout state without confirmation
+        this.activeWorkout = null;
+        this.workoutExercises = [];
+        this.activeProgram = null;
+        
         this.navigate('history');
       } catch (error) {
         console.error('Failed to save workout:', error);
         alert('Failed to save workout');
+      }
+    },
+    
+    async advanceProgram(programId, currentWeek, currentDay) {
+      try {
+        const program = await getProgramById(programId);
+        if (!program) return;
+        
+        // Find next workout day
+        let nextWeek = currentWeek;
+        let nextDay = currentDay;
+        let found = false;
+        
+        // Try next day in current week
+        const currentWeekSchedule = program.schedule[currentWeek] || {};
+        const daysInCurrentWeek = Object.keys(currentWeekSchedule).map(Number).sort((a, b) => a - b);
+        const currentDayIndex = daysInCurrentWeek.indexOf(currentDay);
+        
+        if (currentDayIndex >= 0 && currentDayIndex < daysInCurrentWeek.length - 1) {
+          // Move to next day in current week
+          nextDay = daysInCurrentWeek[currentDayIndex + 1];
+          found = true;
+        } else {
+          // Move to next week
+          nextWeek = currentWeek + 1;
+          
+          if (nextWeek <= program.durationWeeks) {
+            const nextWeekSchedule = program.schedule[nextWeek] || {};
+            const daysInNextWeek = Object.keys(nextWeekSchedule).map(Number).sort((a, b) => a - b);
+            
+            if (daysInNextWeek.length > 0) {
+              nextDay = daysInNextWeek[0];
+              found = true;
+            }
+          } else {
+            // Program completed!
+            alert(`Congratulations! You've completed the ${program.name} program!`);
+            nextWeek = 1;
+            nextDay = 1;
+            found = true;
+          }
+        }
+        
+        if (found) {
+          await updateProgramProgress(programId, {
+            currentWeek: nextWeek,
+            currentDay: nextDay,
+            lastWorkoutDate: new Date().toISOString()
+          });
+          
+          await this.loadPrograms();
+        }
+      } catch (error) {
+        console.error('Failed to advance program:', error);
       }
     },
     
@@ -338,6 +390,7 @@ export default {
       
       this.activeWorkout = null;
       this.workoutExercises = [];
+      this.activeProgram = null;
       this.navigate('home');
     },
     
@@ -419,6 +472,185 @@ export default {
           buildNumber: '0'
         };
       }
+    },
+    
+    async loadPrograms() {
+      this.loading = true;
+      try {
+        const programs = await getAllPrograms();
+        
+        // Load progress for each program
+        const progressPromises = programs.map(async (program) => {
+          const progress = await getProgramProgress(program.id);
+          return { programId: program.id, progress };
+        });
+        
+        const progressResults = await Promise.all(progressPromises);
+        
+        // Create progress lookup object
+        this.programsProgress = {};
+        progressResults.forEach(({ programId, progress }) => {
+          this.programsProgress[programId] = progress;
+        });
+        
+        this.programs = programs;
+      } catch (error) {
+        console.error('Failed to load programs:', error);
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    async handleProgramAction(event) {
+      const { action, programId } = event.detail;
+      const program = this.programs.find(p => p.id === programId);
+      
+      if (!program) return;
+      
+      if (action === 'start') {
+        await this.startProgram(programId);
+      } else if (action === 'continue') {
+        await this.continueProgram(programId);
+      } else if (action === 'reset') {
+        if (confirm('Are you sure you want to reset this program? Your progress will be lost.')) {
+          await this.resetProgram(programId);
+        }
+      } else if (action === 'view') {
+        await this.viewProgramDetails(programId);
+      }
+    },
+    
+    async startProgram(programId) {
+      try {
+        // Reset progress to start from beginning
+        await resetProgramProgress(programId);
+        
+        // Reload progress
+        await this.loadPrograms();
+        
+        // Continue with the first workout
+        await this.continueProgram(programId);
+      } catch (error) {
+        console.error('Failed to start program:', error);
+        alert('Failed to start program');
+      }
+    },
+    
+    async continueProgram(programId) {
+      try {
+        const program = await getProgramById(programId);
+        const progress = await getProgramProgress(programId);
+        
+        if (!program || !progress) {
+          alert('Program not found');
+          return;
+        }
+        
+        // Get the template for current week and day
+        const templateId = program.schedule?.[progress.currentWeek]?.[progress.currentDay];
+        
+        if (!templateId) {
+          alert('No workout scheduled for this day');
+          return;
+        }
+        
+        const template = await getTemplateById(templateId);
+        
+        if (!template) {
+          alert('Workout template not found');
+          return;
+        }
+        
+        // Set active program context
+        this.activeProgram = {
+          programId: program.id,
+          programName: program.name,
+          week: progress.currentWeek,
+          day: progress.currentDay,
+          totalWeeks: program.durationWeeks
+        };
+        
+        // Initialize workout with program context
+        await this.startWorkoutFromTemplate(template.id, program.id, progress.currentWeek, progress.currentDay);
+      } catch (error) {
+        console.error('Failed to continue program:', error);
+        alert('Failed to continue program');
+      }
+    },
+    
+    async resetProgram(programId) {
+      try {
+        await resetProgramProgress(programId);
+        await this.loadPrograms();
+        alert('Program progress has been reset');
+      } catch (error) {
+        console.error('Failed to reset program:', error);
+        alert('Failed to reset program');
+      }
+    },
+    
+    async viewProgramDetails(programId) {
+      const program = this.programs.find(p => p.id === programId);
+      const progress = this.programsProgress[programId];
+      
+      if (!program) return;
+      
+      // Build schedule details
+      let scheduleText = `${program.name}\n\n${program.description}\n\n`;
+      scheduleText += `Duration: ${program.durationWeeks} weeks\n\n`;
+      scheduleText += 'Schedule:\n';
+      
+      for (let week = 1; week <= program.durationWeeks; week++) {
+        scheduleText += `\nWeek ${week}:\n`;
+        const weekSchedule = program.schedule[week] || {};
+        
+        for (const [day, templateId] of Object.entries(weekSchedule)) {
+          const template = this.templates.find(t => t.id === templateId);
+          scheduleText += `  Day ${day}: ${template?.name || 'Unknown'}\n`;
+        }
+      }
+      
+      if (progress && progress.currentWeek) {
+        scheduleText += `\n\nCurrent Progress: Week ${progress.currentWeek}, Day ${progress.currentDay}`;
+      }
+      
+      alert(scheduleText);
+    },
+    
+    async startWorkoutFromTemplate(templateId, programId = null, week = null, day = null) {
+      const template = this.templates.find(t => t.id === templateId);
+      if (!template) return;
+      
+      // Initialize workout session
+      this.activeWorkout = {
+        templateId: template.id,
+        templateName: template.name,
+        programId: programId,
+        week: week,
+        day: day,
+        startTime: new Date().toISOString(),
+        exercises: []
+      };
+      
+      // Load exercises for this workout
+      const exercises = await Promise.all(
+        (template.exerciseIds || []).map(id => getExerciseById(id))
+      );
+      
+      // Initialize workout exercises with empty sets
+      this.workoutExercises = exercises.filter(ex => ex).map(exercise => ({
+        exerciseId: exercise.id,
+        exerciseName: exercise.name,
+        muscleGroup: exercise.muscleGroup,
+        sets: [
+          { setNumber: 1, reps: '', weight: '', completed: false },
+          { setNumber: 2, reps: '', weight: '', completed: false },
+          { setNumber: 3, reps: '', weight: '', completed: false }
+        ]
+      }));
+      
+      // Navigate to workout view
+      this.currentView = 'workout';
     }
   },
   
@@ -500,30 +732,73 @@ export default {
         
         <div v-if="currentView === 'templates'" class="view-templates">
           <header class="view-header">
-            <h1>Workout Templates</h1>
-            <button @click="openTemplateForm()" class="btn btn-primary">
-              <svg class="icon" viewBox="0 0 24 24" width="20" height="20">
-                <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-              </svg>
-              Create Template
-            </button>
+            <h1>Programs & Templates</h1>
           </header>
           
-          <div v-if="loading" class="loading">Loading templates...</div>
-          
-          <div v-else-if="templates.length === 0" class="empty-state">
-            <p>No workout templates yet. Create your first template to get started!</p>
+          <!-- Tab Navigation -->
+          <div class="tabs">
+            <button 
+              class="tab-button" 
+              :class="{ active: currentTab === 'programs' }"
+              @click="currentTab = 'programs'"
+            >
+              Programs
+            </button>
+            <button 
+              class="tab-button" 
+              :class="{ active: currentTab === 'templates' }"
+              @click="currentTab = 'templates'"
+            >
+              Templates
+            </button>
           </div>
           
-          <div v-else class="template-list">
-            <template-card
-              v-for="template in templates"
-              :key="template.id"
-              :template="template"
-              @template-start="handleTemplateStart(template.id)"
-              @template-edit="handleTemplateEdit(template.id)"
-              @template-delete="handleTemplateDelete(template.id)"
-            ></template-card>
+          <!-- Programs Tab -->
+          <div v-if="currentTab === 'programs'" class="tab-content">
+            <div v-if="loading" class="loading">Loading programs...</div>
+            
+            <div v-else-if="programs.length === 0" class="empty-state">
+              <p>No programs available yet.</p>
+            </div>
+            
+            <div v-else class="program-list">
+              <program-card
+                v-for="program in programs"
+                :key="program.id"
+                :program="JSON.stringify(program)"
+                :progress="JSON.stringify(programsProgress[program.id])"
+                @program-action="handleProgramAction"
+              ></program-card>
+            </div>
+          </div>
+          
+          <!-- Templates Tab -->
+          <div v-if="currentTab === 'templates'" class="tab-content">
+            <div class="tab-header">
+              <button @click="openTemplateForm()" class="btn btn-primary">
+                <svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                </svg>
+                Create Template
+              </button>
+            </div>
+            
+            <div v-if="loading" class="loading">Loading templates...</div>
+            
+            <div v-else-if="templates.length === 0" class="empty-state">
+              <p>No workout templates yet. Create your first template to get started!</p>
+            </div>
+            
+            <div v-else class="template-list">
+              <template-card
+                v-for="template in templates"
+                :key="template.id"
+                :template="template"
+                @template-start="handleTemplateStart(template.id)"
+                @template-edit="handleTemplateEdit(template.id)"
+                @template-delete="handleTemplateDelete(template.id)"
+              ></template-card>
+            </div>
           </div>
           
           <!-- Template Form Modal -->
@@ -602,6 +877,9 @@ export default {
             <header class="workout-header">
               <div>
                 <h1>{{ activeWorkout.templateName }}</h1>
+                <p v-if="activeProgram" class="program-context">
+                  {{ activeProgram.programName }} - Week {{ activeProgram.week }}, Day {{ activeProgram.day }}
+                </p>
                 <p class="workout-time">Started: {{ new Date(activeWorkout.startTime).toLocaleTimeString() }}</p>
               </div>
               <div class="workout-actions">
