@@ -772,148 +772,908 @@ async function createMobilityFlows() {
 }
 
 /**
- * Create workout templates - This is a large function, will be split into blocks
+ * Generic template creator from workout data
+ */
+async function createTemplate(name, workoutData, exercises, flows) {
+  const templateId = await addWorkoutTemplate({
+    name: name,
+    exerciseIds: []
+  });
+  
+  // Add prepare phase
+  if (workoutData.prepare) {
+    await addExercises(templateId, workoutData.prepare.map(ex => ({
+      ...ex,
+      exerciseId: exercises[ex.exercise]
+    })), 'prepare');
+  }
+  
+  // Add practice phase
+  if (workoutData.practice) {
+    await addExercises(templateId, workoutData.practice.map(ex => ({
+      ...ex,
+      exerciseId: exercises[ex.exercise]
+    })), 'practice');
+  }
+  
+  // Add perform phase
+  if (workoutData.perform) {
+    await addExercises(templateId, workoutData.perform.map(ex => ({
+      ...ex,
+      exerciseId: exercises[ex.exercise]
+    })), 'perform');
+  }
+  
+  // Add ponder phase
+  if (workoutData.ponder) {
+    await addExercises(templateId, workoutData.ponder.map(ex => ({
+      ...ex,
+      exerciseId: exercises[ex.exercise]
+    })), 'ponder');
+  }
+  
+  return templateId;
+}
+
+/**
+ * Get workout data definitions for all 20 weeks
+ */
+function getWorkoutDataDefinitions() {
+  const warmup = () => [
+    { exercise: 'Wrist Mobility' },
+    { exercise: 'Shoulder CARs' },
+    { exercise: 'Cat-Cow', reps: '10' },
+    { exercise: 'Spiderman Lunge w/ T-Spine Rotation', reps: '5/side' },
+    { exercise: 'Deep Squat Hold', time: '1-2 min' },
+    { exercise: 'Banded Straight Arm Pulldowns', sets: '2', reps: '12-15', notes: 'Light, focus on lat activation' }
+  ];
+  
+  const ponderDay1 = () => [
+    { exercise: 'Dead Hang', sets: '2', time: '30s' },
+    { exercise: 'Wrist/Forearm Stretches', time: '1 min', notes: 'Essential after rings/HSPU' },
+    { exercise: 'Child\'s Pose w/ Lat Stretch', time: '1 min' },
+    { exercise: 'Chest Stretch', time: '1 min', notes: 'On rings or doorway' }
+  ];
+  
+  const ponderDay3 = () => [
+    { exercise: 'Dead Hang', sets: '2', time: '30s' },
+    { exercise: 'Tricep/Chest "Dip" Stretch', time: '1 min' },
+    { exercise: 'Couch Stretch', time: '1 min/side', notes: 'Essential for Bulgarian Split Squats' },
+    { exercise: 'Wrist/Forearm Stretches', time: '1 min' }
+  ];
+  
+  return {
+    // Block 1: Foundation (Weeks 1-4)
+    '1_1': {
+      name: 'Week 1 Day 1: Pull Volume',
+      prepare: warmup(),
+      practice: [{ exercise: 'HSPU', label: 'Block 1 Skill A', sets: '3', reps: '3-4', rest: '60-90s' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '5x(1,2,3)', reps: 'Ladder', rest: '90-120s', notes: 'Ladder: 1,2,3 reps with 15s rest between' },
+        { exercise: 'Ring Rows', label: 'B1', sets: '3', reps: '15', rest: '30-60s', notes: 'Feet on floor' },
+        { exercise: 'Ring Push-ups', label: 'B2', sets: '3', reps: '10', rest: '90-120s' },
+        { exercise: 'Hollow Body Rocks', label: 'C1', sets: '3', time: '30s', rest: '60s' }
+      ],
+      ponder: ponderDay1()
+    },
+    '1_2': {
+      name: 'Week 1 Day 2: Active Recovery & Core',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Knee Raises', label: 'Core', sets: '3 rounds', reps: '15', notes: 'Slow, controlled' },
+        { exercise: 'Arch Body Rocks', label: 'Core', sets: '3 rounds', time: '30-45s' },
+        { exercise: 'Side Plank', label: 'Core', sets: '3 rounds', time: '30-45s/side' },
+        { exercise: 'Bird-Dog', label: 'Core', sets: '3 rounds', time: '45s', notes: 'Slow & controlled' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min', notes: 'Mobility flow - see library' }]
+    },
+    '1_3': {
+      name: 'Week 1 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Crow Stand', label: 'Block 1 Skill B', sets: '3', time: '10-20s', rest: '60-90s' }],
+      perform: [
+        { exercise: 'Weighted Pull-ups', label: 'A1', sets: '5', reps: '5', weight: '10kg', rest: '120s' },
+        { exercise: 'Dips', label: 'B1', sets: '3', reps: '12', rest: '30-60s' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '8-10/leg', weight: 'Bodyweight', rest: '90-120s', notes: '3s negative, pain-free depth' },
+        { exercise: 'L-Sit Progression', label: 'C1', sets: '4', time: '20s', rest: '60s', notes: 'Start with tuck' }
+      ],
+      ponder: ponderDay3()
+    },
+    // Week 2
+    '2_1': {
+      name: 'Week 2 Day 1: Pull Volume',
+      prepare: warmup(),
+      practice: [{ exercise: 'HSPU', label: 'Block 1 Skill A', sets: '3', reps: '3-4', rest: '60-90s' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '6x(1,2,3)', reps: 'Ladder', rest: '90-120s' },
+        { exercise: 'Ring Rows', label: 'B1', sets: '3', reps: '18', rest: '30-60s', notes: 'Feet on floor' },
+        { exercise: 'Ring Push-ups', label: 'B2', sets: '3', reps: '12', rest: '90-120s' },
+        { exercise: 'Hollow Body Rocks', label: 'C1', sets: '3', time: '35s', rest: '60s' }
+      ],
+      ponder: ponderDay1()
+    },
+    '2_2': {
+      name: 'Week 2 Day 2: Active Recovery & Core',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Knee Raises', label: 'Core', sets: '3 rounds', reps: '15', notes: 'Slow, controlled' },
+        { exercise: 'Arch Body Rocks', label: 'Core', sets: '3 rounds', time: '30-45s' },
+        { exercise: 'Side Plank', label: 'Core', sets: '3 rounds', time: '30-45s/side' },
+        { exercise: 'Bird-Dog', label: 'Core', sets: '3 rounds', time: '45s' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min', notes: 'Mobility flow - see library' }]
+    },
+    '2_3': {
+      name: 'Week 2 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Crow Stand', label: 'Block 1 Skill B', sets: '3', time: '10-20s', rest: '60-90s' }],
+      perform: [
+        { exercise: 'Weighted Pull-ups', label: 'A1', sets: '5', reps: '5', weight: '11.5kg', rest: '120s' },
+        { exercise: 'Dips', label: 'B1', sets: '3', reps: '15', rest: '30-60s' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '10-12/leg', weight: 'Bodyweight', rest: '90-120s' },
+        { exercise: 'L-Sit Progression', label: 'C1', sets: '4', time: '22s', rest: '60s' }
+      ],
+      ponder: ponderDay3()
+    },
+    // Week 3
+    '3_1': {
+      name: 'Week 3 Day 1: Pull Volume',
+      prepare: warmup(),
+      practice: [{ exercise: 'HSPU', label: 'Block 1 Skill A', sets: '3', reps: '3-4', rest: '60-90s' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '7x(1,2,3)', reps: 'Ladder', rest: '90-120s' },
+        { exercise: 'Ring Rows', label: 'B1', sets: '3', reps: '20', rest: '30-60s', notes: 'Feet on floor' },
+        { exercise: 'Ring Push-ups', label: 'B2', sets: '3', reps: '15', rest: '90-120s' },
+        { exercise: 'Hollow Body Rocks', label: 'C1', sets: '3', time: '40s', rest: '60s' }
+      ],
+      ponder: ponderDay1()
+    },
+    '3_2': {
+      name: 'Week 3 Day 2: Active Recovery & Core',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Knee Raises', label: 'Core', sets: '3 rounds', reps: '15' },
+        { exercise: 'Arch Body Rocks', label: 'Core', sets: '3 rounds', time: '30-45s' },
+        { exercise: 'Side Plank', label: 'Core', sets: '3 rounds', time: '30-45s/side' },
+        { exercise: 'Bird-Dog', label: 'Core', sets: '3 rounds', time: '45s' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min', notes: 'Mobility flow' }]
+    },
+    '3_3': {
+      name: 'Week 3 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Crow Stand', label: 'Block 1 Skill B', sets: '3', time: '10-20s', rest: '60-90s' }],
+      perform: [
+        { exercise: 'Weighted Pull-ups', label: 'A1', sets: '5', reps: '5', weight: '12.5kg', rest: '120s' },
+        { exercise: 'Weighted Dips', label: 'B1', sets: '3', reps: '5', weight: '5kg', rest: '30-60s' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '8/leg', weight: '4-6kg', rest: '90-120s' },
+        { exercise: 'L-Sit Progression', label: 'C1', sets: '4', time: '25s', rest: '60s', notes: 'Try next step if ready' }
+      ],
+      ponder: ponderDay3()
+    },
+    // Week 4 (Deload)
+    '4_1': {
+      name: 'Week 4 Day 1: Pull Volume (Deload)',
+      prepare: warmup(),
+      practice: [{ exercise: 'HSPU', label: 'Block 1 Skill A', sets: '2', reps: '3-4', rest: '60-90s', notes: 'Lighter' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '4x(1,2,3)', reps: 'Ladder', rest: '90-120s' },
+        { exercise: 'Ring Rows', label: 'B1', sets: '2', reps: '15', rest: '30-60s' },
+        { exercise: 'Ring Push-ups', label: 'B2', sets: '2', reps: '10', rest: '90-120s' },
+        { exercise: 'Hollow Body Rocks', label: 'C1', sets: '2', time: '20s', rest: '60s' }
+      ],
+      ponder: [
+        { exercise: 'Dead Hang', sets: '2', time: '20s' },
+        { exercise: 'Child\'s Pose w/ Lat Stretch', time: '1 min' },
+        { exercise: 'Chest Stretch', time: '30s/side' }
+      ]
+    },
+    '4_2': {
+      name: 'Week 4 Day 2: Active Recovery & Core (Deload)',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Knee Raises', label: 'Core', sets: '2 rounds', reps: '15' },
+        { exercise: 'Side Plank', label: 'Core', sets: '2 rounds', time: '30s/side' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '4_3': {
+      name: 'Week 4 Day 3: Full Body Intensity (Deload)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Crow Stand', label: 'Block 1 Skill B', sets: '2', time: '10-20s' }],
+      perform: [
+        { exercise: 'Weighted Pull-ups', label: 'A1', sets: '3', reps: '5', weight: '8kg', rest: '120s' },
+        { exercise: 'Dips', label: 'B1', sets: '2', reps: '10', rest: '30-60s' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '2', reps: '8/leg', weight: 'Bodyweight', rest: '90-120s' },
+        { exercise: 'L-Sit Progression', label: 'C1', sets: '3', time: '15s', rest: '60s' }
+      ],
+      ponder: [
+        { exercise: 'Dead Hang', sets: '2', time: '20s' },
+        { exercise: 'Couch Stretch', time: '1 min/side' },
+        { exercise: 'Wrist/Forearm Stretches', time: '30s' }
+      ]
+    },
+    
+    // Block 2: Intensification (Weeks 5-8) - Higher intensity, EMOM protocols
+    '5_1': {
+      name: 'Week 5 Day 1: Pull Volume (EMOM)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Wall Handstand Hold', label: 'Block 2 Skill A', sets: '3', time: '20-30s', rest: '60-90s' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '8', reps: '4', notes: 'EMOM: 4 reps every minute for 8 minutes', rest: 'EMOM' },
+        { exercise: 'Ring Rows', label: 'B1', sets: '3', reps: '10', rest: '30-60s', notes: 'Feet elevated' },
+        { exercise: 'Ring Push-ups', label: 'B2', sets: '3', reps: '10', rest: '90-120s', notes: 'Feet elevated' },
+        { exercise: 'Ab Wheel Rollouts (Knees)', label: 'C1', sets: '3', reps: '10', rest: '60s' }
+      ],
+      ponder: ponderDay1()
+    },
+    '5_2': {
+      name: 'Week 5 Day 2: Active Recovery & Core (Variation 2)',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Leg Raises', label: 'Core', sets: '3 rounds', reps: '10-15' },
+        { exercise: 'Side Plank Crunches', label: 'Core', sets: '3 rounds', time: '30s/side' },
+        { exercise: 'Plank with Shoulder Taps', label: 'Core', sets: '3 rounds', time: '45s' },
+        { exercise: 'Seated Windshield Wipers', label: 'Core', sets: '3 rounds', time: '45s' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min', notes: 'Mobility flow' }]
+    },
+    '5_3': {
+      name: 'Week 5 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Ring Support Hold (RTO)', label: 'Block 2 Skill B', sets: '3', time: '15-20s', rest: '60-90s' }],
+      perform: [
+        { exercise: 'Weighted Pull-ups', label: 'A1', sets: '5', reps: '5', weight: '14kg', rest: '120s' },
+        { exercise: 'Weighted Dips', label: 'B1', sets: '3', reps: '5', weight: '7.5kg', rest: '30-60s' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '8-10/leg', weight: '8-10kg', rest: '90-120s' },
+        { exercise: 'L-Sit Progression', label: 'C1', sets: '4', time: '20s', rest: '60s' }
+      ],
+      ponder: ponderDay3()
+    },
+    
+    // Weeks 6-8 follow similar patterns with progressive overload
+    '6_1': {
+      name: 'Week 6 Day 1: Pull Volume (EMOM)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Wall Handstand Hold', label: 'Block 2 Skill A', sets: '3', time: '20-30s' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '10', reps: '4', notes: 'EMOM: 4 reps every minute', rest: 'EMOM' },
+        { exercise: 'Ring Rows', label: 'B1', sets: '3', reps: '12', notes: 'Feet elevated' },
+        { exercise: 'Ring Push-ups', label: 'B2', sets: '3', reps: '12', notes: 'Feet elevated' },
+        { exercise: 'Ab Wheel Rollouts (Knees)', label: 'C1', sets: '3', reps: '12' }
+      ],
+      ponder: ponderDay1()
+    },
+    '6_2': {
+      name: 'Week 6 Day 2: Active Recovery & Core',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Leg Raises', label: 'Core', sets: '3 rounds', reps: '10-15' },
+        { exercise: 'Side Plank Crunches', label: 'Core', sets: '3 rounds', time: '30s/side' },
+        { exercise: 'Plank with Shoulder Taps', label: 'Core', sets: '3 rounds', time: '45s' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '6_3': {
+      name: 'Week 6 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Ring Support Hold (RTO)', label: 'Block 2 Skill B', sets: '3', time: '15-20s' }],
+      perform: [
+        { exercise: 'Weighted Pull-ups', label: 'A1', sets: '5', reps: '5', weight: '15kg', rest: '120s' },
+        { exercise: 'Weighted Dips', label: 'B1', sets: '3', reps: '5', weight: '10kg' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '8-10/leg', weight: '10-12kg' },
+        { exercise: 'L-Sit Progression', label: 'C1', sets: '4', time: '22s' }
+      ],
+      ponder: ponderDay3()
+    },
+    '7_1': {
+      name: 'Week 7 Day 1: Pull Volume (EMOM)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Wall Handstand Hold', label: 'Block 2 Skill A', sets: '3', time: '20-30s' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '10', reps: '5', notes: 'EMOM: 5 reps every minute', rest: 'EMOM' },
+        { exercise: 'Ring Rows', label: 'B1', sets: '3', reps: '15', notes: 'Feet elevated' },
+        { exercise: 'Ring Push-ups', label: 'B2', sets: '3', reps: '15', notes: 'Feet elevated' },
+        { exercise: 'Ab Wheel Rollouts (Knees)', label: 'C1', sets: '3', reps: '15' }
+      ],
+      ponder: ponderDay1()
+    },
+    '7_2': {
+      name: 'Week 7 Day 2: Active Recovery & Core',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Leg Raises', label: 'Core', sets: '3 rounds', reps: '10-15' },
+        { exercise: 'Side Plank Crunches', label: 'Core', sets: '3 rounds', time: '30s/side' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '7_3': {
+      name: 'Week 7 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Ring Support Hold (RTO)', label: 'Block 2 Skill B', sets: '3', time: '15-20s' }],
+      perform: [
+        { exercise: 'Weighted Pull-ups', label: 'A1', sets: '5', reps: '5', weight: '16kg', rest: '120s', notes: 'New 5x5 PR' },
+        { exercise: 'Weighted Dips', label: 'B1', sets: '3', reps: '5', weight: '12.5kg' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '8-10/leg', weight: '12.5kg' },
+        { exercise: 'L-Sit Progression', label: 'C1', sets: '4', time: '25s', notes: 'Try next step' }
+      ],
+      ponder: ponderDay3()
+    },
+    '8_1': {
+      name: 'Week 8 Day 1: Pull Volume (Deload)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Wall Handstand Hold', label: 'Block 2 Skill A', sets: '2', time: '20-30s', notes: 'Lighter' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '6', reps: '4', notes: 'EMOM - reduced volume' },
+        { exercise: 'Ring Rows', label: 'B1', sets: '2', reps: '10', notes: 'Feet elevated' },
+        { exercise: 'Ring Push-ups', label: 'B2', sets: '2', reps: '10', notes: 'Feet elevated' },
+        { exercise: 'Ab Wheel Rollouts (Knees)', label: 'C1', sets: '2', reps: '10' }
+      ],
+      ponder: [{ exercise: 'Dead Hang', sets: '2', time: '20s' }, { exercise: 'Chest Stretch', time: '30s/side' }]
+    },
+    '8_2': {
+      name: 'Week 8 Day 2: Active Recovery & Core (Deload)',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Leg Raises', label: 'Core', sets: '2 rounds', reps: '10' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '8_3': {
+      name: 'Week 8 Day 3: Full Body Intensity (Deload)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Ring Support Hold (RTO)', label: 'Block 2 Skill B', sets: '2', time: '15-20s' }],
+      perform: [
+        { exercise: 'Weighted Pull-ups', label: 'A1', sets: '3', reps: '5', weight: '10kg' },
+        { exercise: 'Weighted Dips', label: 'B1', sets: '3', reps: '5', weight: '5kg' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '2', reps: '8/leg', weight: 'Bodyweight' },
+        { exercise: 'L-Sit Progression', label: 'C1', sets: '3', time: '15s' }
+      ],
+      ponder: [{ exercise: 'Dead Hang', sets: '2', time: '20s' }, { exercise: 'Couch Stretch', time: '1 min/side' }]
+    },
+    
+    // Block 3: Pre-Unilateral (Weeks 9-12) - Asymmetrical work, PPPU introduction
+    '9_1': {
+      name: 'Week 9 Day 1: Pull Volume (Cluster Sets)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Pseudo-Planche Holds', label: 'Block 3 Skill A', sets: '3', time: '5-10s', rest: '60-90s' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '5', reps: '(3,3,3)', notes: 'Cluster: 3-3-3 with 15s rest between clusters, 2-3min between sets. 45 total reps', rest: '2-3min' },
+        { exercise: 'Ring Push-ups', label: 'B1', sets: '3', reps: '15', notes: 'Feet elevated' },
+        { exercise: 'Ring Rows', label: 'B2', sets: '3', reps: 'AMRAP-2', notes: 'Feet elevated, stop 2 reps before failure' },
+        { exercise: 'Plank Drags', label: 'C1', sets: '3', reps: '10/side', notes: 'With weight' }
+      ],
+      ponder: ponderDay1()
+    },
+    '9_2': {
+      name: 'Week 9 Day 2: Active Recovery & Core (Variation 3)',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Windshield Wipers (Bent)', label: 'Core', sets: '3 rounds', reps: '10-16 total' },
+        { exercise: 'Russian Twists', label: 'Core', sets: '3 rounds', time: '30s' },
+        { exercise: 'Hollow Body Hold', label: 'Core', sets: '3 rounds', time: '30-45s' },
+        { exercise: 'Side Plank', label: 'Core', sets: '3 rounds', time: '30-45s/side' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '9_3': {
+      name: 'Week 9 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Cossack Squats', label: 'Block 3 Skill B', sets: '3', reps: '8-10/leg', notes: 'Bodyweight, focus on depth' }],
+      perform: [
+        { exercise: 'Mixed-Grip Pull-ups', label: 'A1', sets: '4', reps: '3/side', rest: '120s' },
+        { exercise: 'Pseudo-Planche Push-ups', label: 'B1', sets: '3', reps: '5-8', notes: 'Focus on lean' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '10-12/leg', weight: '10kg' },
+        { exercise: 'L-Sit Pull-ups (Tuck)', label: 'C1', sets: '3', reps: '5', notes: 'Or 10s hold + 5 regular pull-ups' }
+      ],
+      ponder: ponderDay3()
+    },
+    
+    // Weeks 10-12 follow progressive overload patterns
+    '10_1': {
+      name: 'Week 10 Day 1: Pull Volume (Cluster Sets)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Pseudo-Planche Holds', label: 'Block 3 Skill A', sets: '3', time: '5-10s' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '5', reps: '(4,3,3)', notes: 'Cluster Sets - 50 total reps' },
+        { exercise: 'Ring Push-ups', label: 'B1', sets: '3', reps: '18', notes: 'Feet elevated' },
+        { exercise: 'Ring Rows', label: 'B2', sets: '3', reps: 'AMRAP-1' },
+        { exercise: 'Plank Drags', label: 'C1', sets: '3', reps: '12/side' }
+      ],
+      ponder: ponderDay1()
+    },
+    '10_2': {
+      name: 'Week 10 Day 2: Active Recovery & Core',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Windshield Wipers (Bent)', label: 'Core', sets: '3 rounds', reps: '10-16 total' },
+        { exercise: 'Russian Twists', label: 'Core', sets: '3 rounds', time: '30s' },
+        { exercise: 'Hollow Body Hold', label: 'Core', sets: '3 rounds', time: '30-45s' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '10_3': {
+      name: 'Week 10 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Cossack Squats', label: 'Block 3 Skill B', sets: '3', reps: '8-10/leg' }],
+      perform: [
+        { exercise: 'Mixed-Grip Pull-ups', label: 'A1', sets: '4', reps: '4/side' },
+        { exercise: 'Pseudo-Planche Push-ups', label: 'B1', sets: '3', reps: '6-10' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '10-12/leg', weight: '12.5kg' },
+        { exercise: 'L-Sit Pull-ups (Tuck)', label: 'C1', sets: '3', reps: '6' }
+      ],
+      ponder: ponderDay3()
+    },
+    '11_1': {
+      name: 'Week 11 Day 1: Pull Volume (Cluster Sets)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Pseudo-Planche Holds', label: 'Block 3 Skill A', sets: '3', time: '5-10s' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '5', reps: '(4,4,3)', notes: 'Cluster Sets - 55 total reps' },
+        { exercise: 'Ring Push-ups', label: 'B1', sets: '3', reps: '20', notes: 'Feet elevated' },
+        { exercise: 'Ring Rows', label: 'B2', sets: '3', reps: 'AMRAP' },
+        { exercise: 'Plank Drags', label: 'C1', sets: '3', reps: '15/side' }
+      ],
+      ponder: ponderDay1()
+    },
+    '11_2': {
+      name: 'Week 11 Day 2: Active Recovery & Core',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Windshield Wipers (Bent)', label: 'Core', sets: '3 rounds', reps: '10-16 total' },
+        { exercise: 'Hollow Body Hold', label: 'Core', sets: '3 rounds', time: '30-45s' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '11_3': {
+      name: 'Week 11 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Cossack Squats', label: 'Block 3 Skill B', sets: '3', reps: '8-10/leg' }],
+      perform: [
+        { exercise: 'Offset Pull-ups (Band Assist)', label: 'A1', sets: '4', reps: '3/side', notes: 'Main arm does most work' },
+        { exercise: 'Pseudo-Planche Push-ups', label: 'B1', sets: '3', reps: '8-12' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '10-12/leg', weight: '14kg' },
+        { exercise: 'L-Sit Pull-ups (Tuck)', label: 'C1', sets: '3', reps: '8' }
+      ],
+      ponder: ponderDay3()
+    },
+    '12_1': {
+      name: 'Week 12 Day 1: Pull Volume (Deload)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Pseudo-Planche Holds', label: 'Block 3 Skill A', sets: '2', time: '5-10s' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '3', reps: '(3,3,3)', notes: 'Cluster Sets - 27 total reps' },
+        { exercise: 'Ring Push-ups', label: 'B1', sets: '2', reps: '12', notes: 'Feet elevated' },
+        { exercise: 'Ring Rows', label: 'B2', sets: '2', reps: '10' },
+        { exercise: 'Plank Drags', label: 'C1', sets: '2', reps: '8/side' }
+      ],
+      ponder: [{ exercise: 'Dead Hang', sets: '2', time: '20s' }, { exercise: 'Chest Stretch', time: '30s/side' }]
+    },
+    '12_2': {
+      name: 'Week 12 Day 2: Active Recovery & Core (Deload)',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Windshield Wipers (Bent)', label: 'Core', sets: '2 rounds', reps: '10' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '12_3': {
+      name: 'Week 12 Day 3: Full Body Intensity (Deload)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Cossack Squats', label: 'Block 3 Skill B', sets: '2', reps: '8-10/leg' }],
+      perform: [
+        { exercise: 'Mixed-Grip Pull-ups', label: 'A1', sets: '3', reps: '2/side' },
+        { exercise: 'Pseudo-Planche Push-ups', label: 'B1', sets: '2', reps: '5' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '2', reps: '5/leg', weight: 'Bodyweight' },
+        { exercise: 'L-Sit Pull-ups (Tuck)', label: 'C1', sets: '2', reps: '4' }
+      ],
+      ponder: [{ exercise: 'Dead Hang', sets: '2', time: '20s' }]
+    },
+    
+    // Block 4: Accumulation (Weeks 13-16) - Volume work with AMRAP, archer progressions
+    '13_1': {
+      name: 'Week 13 Day 1: Pull Volume (AMRAP)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Skin the Cat', label: 'Block 4 Skill A', sets: '3', reps: '3-5', notes: 'Slow' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '3', reps: 'AMRAP-2', notes: 'As many reps as possible minus 2 (Est: 11-13 reps)' },
+        { exercise: 'Ring Push-ups (RTO)', label: 'B1', sets: '3', reps: '8', notes: 'Rings turned out' },
+        { exercise: 'Archer Row Negatives', label: 'B2', sets: '3', reps: '3-5/side', notes: 'Slow negative' },
+        { exercise: 'Ab Wheel Rollouts (Knees)', label: 'C1', sets: '3', reps: '12' }
+      ],
+      ponder: ponderDay1()
+    },
+    '13_2': {
+      name: 'Week 13 Day 2: Active Recovery & Core (Variation 4)',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Toes-to-Bar (Strict)', label: 'Core', sets: '3 rounds', reps: '5-8' },
+        { exercise: 'L-Sit Flutter Kicks', label: 'Core', sets: '3 rounds', time: '30s' },
+        { exercise: 'Renegade Rows', label: 'Core', sets: '3 rounds', time: '30s', notes: 'Bodyweight or very light' },
+        { exercise: 'Arch Body Hold', label: 'Core', sets: '3 rounds', time: '30s' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '13_3': {
+      name: 'Week 13 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Ring Dips', label: 'Block 4 Skill B', sets: '3', reps: '5-8', notes: 'Focus on control' }],
+      perform: [
+        { exercise: 'Weighted Pull-ups', label: 'A1', sets: '5', reps: '5', weight: '16kg', notes: 'Match previous 5x5 PR' },
+        { exercise: 'Weighted Dips', label: 'B1', sets: '5', reps: '5', weight: '15kg' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '8-10/leg', weight: '14kg' },
+        { exercise: 'L-Sit Pull-ups (Single Leg)', label: 'C1', sets: '3', reps: '3/leg', notes: 'Or use Tuck L-Sit' }
+      ],
+      ponder: ponderDay3()
+    },
+    
+    // Weeks 14-16 continue accumulation pattern
+    '14_1': {
+      name: 'Week 14 Day 1: Pull Volume (AMRAP)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Skin the Cat', label: 'Block 4 Skill A', sets: '3', reps: '3-5' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '3', reps: 'AMRAP-1', notes: 'Est: 12-14 reps' },
+        { exercise: 'Ring Push-ups (RTO)', label: 'B1', sets: '3', reps: '10' },
+        { exercise: 'Archer Row Negatives', label: 'B2', sets: '3', reps: '3-5/side' },
+        { exercise: 'Ab Wheel Rollouts (Knees)', label: 'C1', sets: '3', reps: '14' }
+      ],
+      ponder: ponderDay1()
+    },
+    '14_2': {
+      name: 'Week 14 Day 2: Active Recovery & Core',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Toes-to-Bar (Strict)', label: 'Core', sets: '3 rounds', reps: '5-8' },
+        { exercise: 'L-Sit Flutter Kicks', label: 'Core', sets: '3 rounds', time: '30s' },
+        { exercise: 'Arch Body Hold', label: 'Core', sets: '3 rounds', time: '30s' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '14_3': {
+      name: 'Week 14 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Ring Dips', label: 'Block 4 Skill B', sets: '3', reps: '5-8' }],
+      perform: [
+        { exercise: 'Weighted Pull-ups', label: 'A1', sets: '5', reps: '5', weight: '17.5kg', notes: 'New 5RM PR' },
+        { exercise: 'Weighted Dips', label: 'B1', sets: '5', reps: '5', weight: '16kg' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '8-10/leg', weight: '16kg' },
+        { exercise: 'L-Sit Pull-ups (Single Leg)', label: 'C1', sets: '3', reps: '4/leg' }
+      ],
+      ponder: ponderDay3()
+    },
+    '15_1': {
+      name: 'Week 15 Day 1: Pull Volume (AMRAP)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Skin the Cat', label: 'Block 4 Skill A', sets: '3', reps: '3-5' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '3', reps: 'AMRAP', notes: 'Go to failure. Est: 12-15 reps' },
+        { exercise: 'Ring Push-ups (RTO)', label: 'B1', sets: '3', reps: '12' },
+        { exercise: 'Archer Rows (Assisted)', label: 'B2', sets: '3', reps: '3-5/side', notes: 'Use other arm to help' },
+        { exercise: 'Ab Wheel Rollouts (Knees)', label: 'C1', sets: '3', reps: '16' }
+      ],
+      ponder: ponderDay1()
+    },
+    '15_2': {
+      name: 'Week 15 Day 2: Active Recovery & Core',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Toes-to-Bar (Strict)', label: 'Core', sets: '3 rounds', reps: '5-8' },
+        { exercise: 'L-Sit Flutter Kicks', label: 'Core', sets: '3 rounds', time: '30s' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '15_3': {
+      name: 'Week 15 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Ring Dips', label: 'Block 4 Skill B', sets: '3', reps: '5-8' }],
+      perform: [
+        { exercise: 'Weighted Pull-ups', label: 'A1', sets: '5', reps: '5', weight: '18.5kg', notes: 'New 5RM PR' },
+        { exercise: 'Weighted Dips', label: 'B1', sets: '5', reps: '5', weight: '17.5kg' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '8-10/leg', weight: '17.5kg' },
+        { exercise: 'L-Sit Pull-ups (Single Leg)', label: 'C1', sets: '3', reps: '5/leg' }
+      ],
+      ponder: ponderDay3()
+    },
+    '16_1': {
+      name: 'Week 16 Day 1: Pull Volume (Deload)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Skin the Cat', label: 'Block 4 Skill A', sets: '2', reps: '3-5' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '2', reps: 'AMRAP-3' },
+        { exercise: 'Ring Push-ups (RTO)', label: 'B1', sets: '2', reps: '6' },
+        { exercise: 'Ring Rows', label: 'B2', sets: '2', reps: '10', notes: 'Feet elevated' },
+        { exercise: 'Ab Wheel Rollouts (Knees)', label: 'C1', sets: '2', reps: '10' }
+      ],
+      ponder: [{ exercise: 'Dead Hang', sets: '2', time: '20s' }]
+    },
+    '16_2': {
+      name: 'Week 16 Day 2: Active Recovery & Core (Deload)',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Knee Raises', label: 'Core', sets: '2 rounds', reps: '10' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '16_3': {
+      name: 'Week 16 Day 3: Full Body Intensity (Deload)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Ring Dips', label: 'Block 4 Skill B', sets: '2', reps: '5-8' }],
+      perform: [
+        { exercise: 'Weighted Pull-ups', label: 'A1', sets: '3', reps: '5', weight: '12.5kg' },
+        { exercise: 'Weighted Dips', label: 'B1', sets: '3', reps: '5', weight: '12.5kg' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '2', reps: '8/leg', weight: 'Bodyweight' },
+        { exercise: 'L-Sit Pull-ups (Single Leg)', label: 'C1', sets: '2', reps: '2/leg' }
+      ],
+      ponder: [{ exercise: 'Dead Hang', sets: '2', time: '20s' }]
+    },
+    
+    // Block 5: Peak & Unilateral (Weeks 17-20) - Archer pull-ups as primary lift
+    '17_1': {
+      name: 'Week 17 Day 1: Pull Volume (EMOM)',
+      prepare: warmup(),
+      practice: [{ exercise: 'HSPU', label: 'Block 5 Skill A', sets: '4', reps: '4-5', notes: 'Volume' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '10', reps: '6', notes: 'EMOM: 6 reps every minute - 60 total reps' },
+        { exercise: 'Weighted Push-ups (on Parallettes/Bars)', label: 'B1', sets: '3', reps: '10', weight: '10kg' },
+        { exercise: 'Ring Rows', label: 'B2', sets: '3', reps: 'AMRAP-1', notes: 'Feet elevated' },
+        { exercise: 'Hollow Body Rocks', label: 'C1', sets: '3', time: '45s' }
+      ],
+      ponder: ponderDay1()
+    },
+    '17_2': {
+      name: 'Week 17 Day 2: Active Recovery & Core (Variation 5)',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Windshield Wipers (Bent or Straight)', label: 'Core', sets: '3 rounds', reps: '10-12 total' },
+        { exercise: 'Dragon Flag Negatives', label: 'Core', sets: '3 rounds', reps: '3-5', notes: 'Tucked or single leg' },
+        { exercise: 'Hollow Body Rocks', label: 'Core', sets: '3 rounds', time: '30-45s' },
+        { exercise: 'Ab Wheel Rollouts (Knees)', label: 'Core', sets: '3 rounds', reps: '10-15' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '17_3': {
+      name: 'Week 17 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Archer Pull-up Negatives', label: 'Block 5 Skill B', sets: '3', reps: '1/side', notes: 'Use band assist for concentric' }],
+      perform: [
+        { exercise: 'Archer Pull-up Negatives', label: 'A1', sets: '5', reps: '2/side', notes: '3-5s negative' },
+        { exercise: 'Weighted Push-ups (on Parallettes/Bars)', label: 'B1', sets: '5', reps: '5', weight: '12.5kg' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '8-10/leg', weight: '16kg' },
+        { exercise: 'L-Sit Pull-ups (Full)', label: 'C1', sets: '3', reps: '3', notes: 'Use easier variation if needed' }
+      ],
+      ponder: ponderDay3()
+    },
+    
+    // Weeks 18-20 continue peak phase
+    '18_1': {
+      name: 'Week 18 Day 1: Pull Volume (EMOM)',
+      prepare: warmup(),
+      practice: [{ exercise: 'HSPU', label: 'Block 5 Skill A', sets: '4', reps: '4-5' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '10', reps: '7', notes: 'EMOM: 7 reps every minute - 70 total reps' },
+        { exercise: 'Weighted Push-ups (on Parallettes/Bars)', label: 'B1', sets: '3', reps: '10', weight: '12.5kg' },
+        { exercise: 'Ring Rows', label: 'B2', sets: '3', reps: 'AMRAP', notes: 'Feet elevated' },
+        { exercise: 'Hollow Body Rocks', label: 'C1', sets: '3', time: '50s' }
+      ],
+      ponder: ponderDay1()
+    },
+    '18_2': {
+      name: 'Week 18 Day 2: Active Recovery & Core',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Windshield Wipers (Bent or Straight)', label: 'Core', sets: '3 rounds', reps: '10-12 total' },
+        { exercise: 'Dragon Flag Negatives', label: 'Core', sets: '3 rounds', reps: '3-5' },
+        { exercise: 'Hollow Body Rocks', label: 'Core', sets: '3 rounds', time: '30-45s' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '18_3': {
+      name: 'Week 18 Day 3: Full Body Intensity',
+      prepare: warmup(),
+      practice: [{ exercise: 'Archer Pull-up Negatives', label: 'Block 5 Skill B', sets: '3', reps: '1/side' }],
+      perform: [
+        { exercise: 'Archer Pull-up Negatives', label: 'A1', sets: '5', reps: '3/side', notes: '3-5s negative' },
+        { exercise: 'Weighted Push-ups (on Parallettes/Bars)', label: 'B1', sets: '5', reps: '5', weight: '15kg' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '3', reps: '8-10/leg', weight: '18.5kg' },
+        { exercise: 'L-Sit Pull-ups (Full)', label: 'C1', sets: '3', reps: '4' }
+      ],
+      ponder: ponderDay3()
+    },
+    '19_1': {
+      name: 'Week 19 Day 1: Pull Volume (Deload)',
+      prepare: warmup(),
+      practice: [{ exercise: 'HSPU', label: 'Block 5 Skill A', sets: '2', reps: '4-5' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'A1', sets: '5', reps: '4', notes: 'EMOM: 4 reps - 20 total reps' },
+        { exercise: 'Ring Push-ups', label: 'B1', sets: '2', reps: '15', weight: 'Bodyweight' },
+        { exercise: 'Ring Rows', label: 'B2', sets: '2', reps: '10', notes: 'Feet on floor' },
+        { exercise: 'Hollow Body Rocks', label: 'C1', sets: '2', time: '20s' }
+      ],
+      ponder: [{ exercise: 'Dead Hang', sets: '2', time: '20s' }]
+    },
+    '19_2': {
+      name: 'Week 19 Day 2: Active Recovery & Core (Deload)',
+      prepare: [],
+      practice: [],
+      perform: [
+        { exercise: 'Hanging Knee Raises', label: 'Core', sets: '2 rounds', reps: '10' }
+      ],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min' }]
+    },
+    '19_3': {
+      name: 'Week 19 Day 3: Full Body Intensity (Deload)',
+      prepare: warmup(),
+      practice: [{ exercise: 'Archer Pull-up Negatives', label: 'Block 5 Skill B', sets: '2', reps: '1/side', notes: 'Easy' }],
+      perform: [
+        { exercise: 'Archer Pull-up Negatives', label: 'A1', sets: '3', reps: '1/side', notes: 'Easy' },
+        { exercise: 'Dips', label: 'B1', sets: '2', reps: '10', weight: 'Bodyweight' },
+        { exercise: 'Bulgarian Split Squat', label: 'B2', sets: '2', reps: '5/leg', weight: 'Bodyweight' },
+        { exercise: 'L-Sit Pull-ups (Tuck)', label: 'C1', sets: '2', reps: '3' }
+      ],
+      ponder: [{ exercise: 'Dead Hang', sets: '2', time: '20s' }]
+    },
+    '20_1': {
+      name: 'Week 20 Day 1: Test Day',
+      prepare: warmup(),
+      practice: [{ exercise: 'Scapular Pull-ups', label: 'Light activation', sets: '2', reps: '5' }],
+      perform: [
+        { exercise: 'Pull-ups', label: 'Test 1', sets: '1', reps: 'Max', weight: 'Bodyweight', notes: 'Max Reps Bodyweight Pull-ups. Rest 10-15 min before next test.' },
+        { exercise: 'Dips', label: 'Test 2', sets: '1', reps: 'Max', weight: 'Bodyweight', notes: 'Max Reps Bodyweight Dips. Rest 10-15 min before next test.' },
+        { exercise: 'Bulgarian Split Squat', label: 'Test 3', sets: '1', reps: 'Max/leg', weight: 'Bodyweight', notes: 'Max Reps per leg' }
+      ],
+      ponder: [
+        { exercise: 'Dead Hang', sets: '2', time: '20s', notes: 'Gentle' },
+        { exercise: 'Couch Stretch', time: '1 min/side', notes: 'Gentle' },
+        { exercise: 'Chest Stretch', time: '30s/side', notes: 'Gentle' }
+      ]
+    },
+    '20_2': {
+      name: 'Week 20 Day 2: Active Recovery',
+      prepare: [],
+      practice: [],
+      perform: [],
+      ponder: [{ exercise: 'Deep Squat Hold', time: '2 min', notes: 'Mobility flow only. Light and easy.' }]
+    },
+    '20_3': {
+      name: 'Week 20 Day 3: Test Day',
+      prepare: warmup(),
+      practice: [{ exercise: 'Pull-ups', label: 'Light activation', sets: '2', reps: '3', notes: 'Light' }],
+      perform: [
+        { exercise: 'Weighted Pull-ups', label: 'Test 1', sets: '1', reps: '3', weight: 'To be determined', notes: '3-Rep Max (3RM) Weighted Pull-up. Warm up with lighter sets. Rest 10-15 min before next test.' },
+        { exercise: 'Weighted Push-ups (on Parallettes/Bars)', label: 'Test 2', sets: '1', reps: '5', weight: 'To be determined', notes: '5-Rep Max (5RM) Weighted Push-up. Warm up with lighter sets.' }
+      ],
+      ponder: [
+        { exercise: 'Dead Hang', sets: '2', time: '20s', notes: 'Gentle' },
+        { exercise: 'Chest Stretch', time: '30s/side', notes: 'Gentle. Congratulations! Program complete.' }
+      ]
+    },
+    
+    // Optional Workout D variations
+    'd_1': {
+      name: 'Workout D - Variation 1: Glute Focus',
+      prepare: [
+        { exercise: 'Cat-Cow', reps: '10-15' },
+        { exercise: 'Bird-Dog', reps: '10/side', notes: '3s hold' },
+        { exercise: 'Glute Bridge', reps: '15', notes: '2s squeeze at top' },
+        { exercise: 'Banded Side-Steps', reps: '20/side' },
+        { exercise: 'Bodyweight Good Mornings', reps: '15' }
+      ],
+      practice: [],
+      perform: [
+        { exercise: 'Romanian Deadlift (RDL)', label: 'A1', sets: '4', reps: '8-12', rest: '120s', notes: 'Control the weight. Push hips back.' },
+        { exercise: 'Weighted Glute Bridge', label: 'B1', sets: '3', reps: '10-15', rest: '30-60s', notes: '2s squeeze at top' },
+        { exercise: 'Single-Leg Calf Raises', label: 'B2', sets: '3', reps: '15-20/leg', rest: '90-120s', notes: 'To failure. Full range.' },
+        { exercise: 'Banded Face Pulls', label: 'C1', sets: '3', reps: '15-20', rest: '60s', notes: 'Prehab. External rotation.' }
+      ],
+      ponder: [
+        { exercise: 'Pigeon Stretch', time: '1 min/side', notes: 'For glutes' },
+        { exercise: 'Seated Forward Fold', time: '1-2 min', notes: 'For hamstrings' },
+        { exercise: 'Wall Calf Stretch', time: '1 min/side' }
+      ]
+    },
+    'd_2': {
+      name: 'Workout D - Variation 2: Hamstring Focus',
+      prepare: [
+        { exercise: 'Cat-Cow', reps: '10-15' },
+        { exercise: 'Bird-Dog', reps: '10/side', notes: '3s hold' },
+        { exercise: 'Glute Bridge', reps: '15', notes: '2s squeeze at top' },
+        { exercise: 'Banded Side-Steps', reps: '20/side' },
+        { exercise: 'Bodyweight Good Mornings', reps: '15' }
+      ],
+      practice: [],
+      perform: [
+        { exercise: 'Barbell/Dumbbell Good Morning', label: 'A1', sets: '4', reps: '10-12', rest: '120s', notes: 'Start light. Hinge at hip.' },
+        { exercise: 'Nordic Hamstring Negatives', label: 'B1', sets: '3', reps: '3-6', rest: '30-60s', notes: '3-5s negative. Can substitute with Glute-Ham Raises or Stability Ball Curls (3x10-15)' },
+        { exercise: 'Single-Leg Calf Raises', label: 'B2', sets: '3', reps: '15-20/leg', rest: '90-120s', notes: 'To failure' },
+        { exercise: 'Banded Face Pulls', label: 'C1', sets: '3', reps: '15-20', rest: '60s', notes: 'Prehab' }
+      ],
+      ponder: [
+        { exercise: 'Pigeon Stretch', time: '1 min/side' },
+        { exercise: 'Seated Forward Fold', time: '1-2 min' },
+        { exercise: 'Wall Calf Stretch', time: '1 min/side' }
+      ]
+    },
+    'd_3': {
+      name: 'Workout D - Variation 3: Unilateral Focus',
+      prepare: [
+        { exercise: 'Cat-Cow', reps: '10-15' },
+        { exercise: 'Bird-Dog', reps: '10/side', notes: '3s hold' },
+        { exercise: 'Glute Bridge', reps: '15', notes: '2s squeeze at top' },
+        { exercise: 'Banded Side-Steps', reps: '20/side' },
+        { exercise: 'Bodyweight Good Mornings', reps: '15' }
+      ],
+      practice: [],
+      perform: [
+        { exercise: 'Single-Leg Romanian Deadlift (SL-RDL)', label: 'A1', sets: '4', reps: '8-10/leg', rest: '90-120s', notes: 'Dumbbell in opposite hand. Balance and flat back.' },
+        { exercise: 'Weighted Glute Bridge', label: 'B1', sets: '3', reps: '10-15', rest: '30-60s' },
+        { exercise: 'Single-Leg Calf Raises', label: 'B2', sets: '3', reps: '15-20/leg', rest: '90-120s' },
+        { exercise: 'Banded Face Pulls', label: 'C1', sets: '3', reps: '15-20', rest: '60s' }
+      ],
+      ponder: [
+        { exercise: 'Pigeon Stretch', time: '1 min/side' },
+        { exercise: 'Seated Forward Fold', time: '1-2 min' },
+        { exercise: 'Wall Calf Stretch', time: '1 min/side' }
+      ]
+    }
+  };
+}
+
+/**
+ * Create workout templates - This creates all templates for the 20-week program
  */
 async function createWorkoutTemplates(exercises, flows) {
   const templates = {};
+  const workoutDefs = getWorkoutDataDefinitions();
   
-  // Due to the large size of this data, I'll create templates for each week
-  // This will be done in a structured way following the program
+  console.log('Creating workout templates for all 20 weeks...');
   
-  // For now, create a simplified structure that shows the pattern
-  // In production, this would include all 70+ templates
+  // Create templates from definitions (Block 1 for now - Weeks 1-4)
+  for (const [key, def] of Object.entries(workoutDefs)) {
+    templates[key] = await createTemplate(def.name, def, exercises, flows);
+  }
   
-  console.log('Creating workout templates...');
-  
-  // Example: Week 1, Day 1 template
-  const week1Day1Id = await createWeek1Day1Template(exercises);
-  templates['week1_day1'] = week1Day1Id;
-  
-  // More templates would be created here following the same pattern
-  // ... (week1_day2, week1_day3, etc.)
+  console.log(`Created ${Object.keys(templates).length} workout templates`);
   
   return templates;
 }
 
 /**
- * Helper function to create Week 1 Day 1 template as an example
+ * Helper function to add exercise instances in bulk
  */
-async function createWeek1Day1Template(exercises) {
-  // Create the template
-  const templateId = await addWorkoutTemplate({
-    name: 'Week 1 Day 1: Pull Volume',
-    exerciseIds: [] // Will use exerciseInstances instead
-  });
-  
-  // Prepare phase
-  const prepareExercises = [
-    { exerciseId: exercises['Wrist Mobility'], reps: '10-15', notes: '' },
-    { exerciseId: exercises['Shoulder CARs'], reps: '10', notes: '' },
-    { exerciseId: exercises['Cat-Cow'], reps: '10', notes: '' },
-    { exerciseId: exercises['Spiderman Lunge w/ T-Spine Rotation'], reps: '5/side', notes: '' },
-    { exerciseId: exercises['Deep Squat Hold'], time: '1-2 min', notes: '' },
-    { exerciseId: exercises['Banded Straight Arm Pulldowns'], sets: '2', reps: '12-15', notes: 'Light, focus on lat activation' }
-  ];
-  
-  for (const ex of prepareExercises) {
+async function addExercises(templateId, exercisesList, phase) {
+  for (const ex of exercisesList) {
     await addExerciseInstance({
       templateId,
       exerciseId: ex.exerciseId,
-      phase: 'prepare',
-      label: '',
+      phase: phase,
+      label: ex.label || '',
       sets: ex.sets || '1',
       reps: ex.reps || '',
-      rest: '',
+      rest: ex.rest || '',
       time: ex.time || '',
-      notes: ex.notes
+      weight: ex.weight || '',
+      notes: ex.notes || ''
     });
   }
-  
-  // Practice phase (Skill A: HSPU)
-  await addExerciseInstance({
-    templateId,
-    exerciseId: exercises['HSPU'],
-    phase: 'practice',
-    label: 'Block 1 Skill A',
-    sets: '3',
-    reps: '3-4',
-    rest: '60-90s',
-    notes: 'Focus on form'
-  });
-  
-  // Perform phase
-  const performExercises = [
-    {
-      label: 'A1',
-      exerciseId: exercises['Pull-ups'],
-      sets: '5x(1,2,3)',
-      reps: 'Ladder',
-      rest: '90-120s',
-      notes: 'Ladder: 1 rep, rest 15s, 2 reps, rest 15s, 3 reps = 1 set'
-    },
-    {
-      label: 'B1',
-      exerciseId: exercises['Ring Rows'],
-      sets: '3',
-      reps: '15',
-      rest: '30-60s',
-      notes: 'Feet on floor'
-    },
-    {
-      label: 'B2',
-      exerciseId: exercises['Ring Push-ups'],
-      sets: '3',
-      reps: '10',
-      rest: '90-120s',
-      notes: 'After B1'
-    },
-    {
-      label: 'C1',
-      exerciseId: exercises['Hollow Body Rocks'],
-      sets: '3',
-      reps: '',
-      time: '30s',
-      rest: '60s',
-      notes: ''
-    }
-  ];
-  
-  for (const ex of performExercises) {
-    await addExerciseInstance({
-      templateId,
-      exerciseId: ex.exerciseId,
-      phase: 'perform',
-      label: ex.label,
-      sets: ex.sets,
-      reps: ex.reps,
-      rest: ex.rest,
-      time: ex.time || '',
-      notes: ex.notes
-    });
-  }
-  
-  // Ponder phase
-  const ponderExercises = [
-    { exerciseId: exercises['Dead Hang'], sets: '2', time: '30s', notes: '' },
-    { exerciseId: exercises['Wrist/Forearm Stretches'], time: '1 min', notes: 'Essential after rings/HSPU' },
-    { exerciseId: exercises['Child\'s Pose w/ Lat Stretch'], time: '1 min', notes: '' },
-    { exerciseId: exercises['Chest Stretch'], time: '1 min', notes: 'On rings or doorway' }
-  ];
-  
-  for (const ex of ponderExercises) {
-    await addExerciseInstance({
-      templateId,
-      exerciseId: ex.exerciseId,
-      phase: 'ponder',
-      label: '',
-      sets: ex.sets || '1',
-      reps: '',
-      time: ex.time,
-      notes: ex.notes
-    });
-  }
-  
-  return templateId;
 }
 
 /**
@@ -933,12 +1693,26 @@ async function create20WeekProgram(templates) {
       'Maintain posterior chain (hip hinge) strength'
     ],
     schedule: {
-      // For now, just add week 1 as example
-      // In production, all 20 weeks would be defined
-      1: {
-        1: { templateId: templates['week1_day1'], workoutLabel: 'A', isDeload: false },
-        // More days would be added here
-      }
+      1: { 1: { templateId: templates['1_1'], workoutLabel: 'A' }, 2: { templateId: templates['1_2'], workoutLabel: 'C' }, 3: { templateId: templates['1_3'], workoutLabel: 'B' } },
+      2: { 1: { templateId: templates['2_1'], workoutLabel: 'A' }, 2: { templateId: templates['2_2'], workoutLabel: 'C' }, 3: { templateId: templates['2_3'], workoutLabel: 'B' } },
+      3: { 1: { templateId: templates['3_1'], workoutLabel: 'A' }, 2: { templateId: templates['3_2'], workoutLabel: 'C' }, 3: { templateId: templates['3_3'], workoutLabel: 'B' } },
+      4: { 1: { templateId: templates['4_1'], workoutLabel: 'A', isDeload: true }, 2: { templateId: templates['4_2'], workoutLabel: 'C', isDeload: true }, 3: { templateId: templates['4_3'], workoutLabel: 'B', isDeload: true } },
+      5: { 1: { templateId: templates['5_1'], workoutLabel: 'A' }, 2: { templateId: templates['5_2'], workoutLabel: 'C' }, 3: { templateId: templates['5_3'], workoutLabel: 'B' } },
+      6: { 1: { templateId: templates['6_1'], workoutLabel: 'A' }, 2: { templateId: templates['6_2'], workoutLabel: 'C' }, 3: { templateId: templates['6_3'], workoutLabel: 'B' } },
+      7: { 1: { templateId: templates['7_1'], workoutLabel: 'A' }, 2: { templateId: templates['7_2'], workoutLabel: 'C' }, 3: { templateId: templates['7_3'], workoutLabel: 'B' } },
+      8: { 1: { templateId: templates['8_1'], workoutLabel: 'A', isDeload: true }, 2: { templateId: templates['8_2'], workoutLabel: 'C', isDeload: true }, 3: { templateId: templates['8_3'], workoutLabel: 'B', isDeload: true } },
+      9: { 1: { templateId: templates['9_1'], workoutLabel: 'A' }, 2: { templateId: templates['9_2'], workoutLabel: 'C' }, 3: { templateId: templates['9_3'], workoutLabel: 'B' } },
+      10: { 1: { templateId: templates['10_1'], workoutLabel: 'A' }, 2: { templateId: templates['10_2'], workoutLabel: 'C' }, 3: { templateId: templates['10_3'], workoutLabel: 'B' } },
+      11: { 1: { templateId: templates['11_1'], workoutLabel: 'A' }, 2: { templateId: templates['11_2'], workoutLabel: 'C' }, 3: { templateId: templates['11_3'], workoutLabel: 'B' } },
+      12: { 1: { templateId: templates['12_1'], workoutLabel: 'A', isDeload: true }, 2: { templateId: templates['12_2'], workoutLabel: 'C', isDeload: true }, 3: { templateId: templates['12_3'], workoutLabel: 'B', isDeload: true } },
+      13: { 1: { templateId: templates['13_1'], workoutLabel: 'A' }, 2: { templateId: templates['13_2'], workoutLabel: 'C' }, 3: { templateId: templates['13_3'], workoutLabel: 'B' } },
+      14: { 1: { templateId: templates['14_1'], workoutLabel: 'A' }, 2: { templateId: templates['14_2'], workoutLabel: 'C' }, 3: { templateId: templates['14_3'], workoutLabel: 'B' } },
+      15: { 1: { templateId: templates['15_1'], workoutLabel: 'A' }, 2: { templateId: templates['15_2'], workoutLabel: 'C' }, 3: { templateId: templates['15_3'], workoutLabel: 'B' } },
+      16: { 1: { templateId: templates['16_1'], workoutLabel: 'A', isDeload: true }, 2: { templateId: templates['16_2'], workoutLabel: 'C', isDeload: true }, 3: { templateId: templates['16_3'], workoutLabel: 'B', isDeload: true } },
+      17: { 1: { templateId: templates['17_1'], workoutLabel: 'A' }, 2: { templateId: templates['17_2'], workoutLabel: 'C' }, 3: { templateId: templates['17_3'], workoutLabel: 'B' } },
+      18: { 1: { templateId: templates['18_1'], workoutLabel: 'A' }, 2: { templateId: templates['18_2'], workoutLabel: 'C' }, 3: { templateId: templates['18_3'], workoutLabel: 'B' } },
+      19: { 1: { templateId: templates['19_1'], workoutLabel: 'A', isDeload: true }, 2: { templateId: templates['19_2'], workoutLabel: 'C', isDeload: true }, 3: { templateId: templates['19_3'], workoutLabel: 'B', isDeload: true } },
+      20: { 1: { templateId: templates['20_1'], workoutLabel: 'Test Day 1' }, 2: { templateId: templates['20_2'], workoutLabel: 'C' }, 3: { templateId: templates['20_3'], workoutLabel: 'Test Day 2' } }
     },
     workoutDescriptions: {
       A: 'Pull Volume Day - High rep pulling work with accessories',
