@@ -189,9 +189,27 @@ export default {
         const templates = await getAllTemplates();
         // Enrich templates with exercise details
         this.templates = await Promise.all(templates.map(async (template) => {
-          const exercises = await Promise.all(
-            (template.exerciseIds || []).map(id => getExerciseById(id))
-          );
+          let exercises = [];
+          
+          // Check if template uses exerciseIds (legacy/simple templates)
+          if (template.exerciseIds && template.exerciseIds.length > 0) {
+            exercises = await Promise.all(
+              template.exerciseIds.map(id => getExerciseById(id))
+            );
+          } else {
+            // If no exerciseIds, check for exerciseInstances (enhanced templates)
+            const instances = await getExerciseInstancesByTemplateId(template.id);
+            if (instances && instances.length > 0) {
+              // Get unique exercise IDs from instances, filtering out null/undefined
+              const uniqueExerciseIds = [...new Set(instances.map(inst => inst.exerciseId).filter(id => id != null))];
+              if (uniqueExerciseIds.length > 0) {
+                exercises = await Promise.all(
+                  uniqueExerciseIds.map(id => getExerciseById(id))
+                );
+              }
+            }
+          }
+          
           return {
             ...template,
             exercises: exercises.filter(ex => ex) // Filter out null results
@@ -687,9 +705,26 @@ export default {
       };
       
       // Load exercises for this workout
-      const exercises = await Promise.all(
-        (template.exerciseIds || []).map(id => getExerciseById(id))
-      );
+      let exercises = [];
+      
+      // Check if template uses exerciseIds (legacy/simple templates)
+      if (template.exerciseIds && template.exerciseIds.length > 0) {
+        exercises = await Promise.all(
+          template.exerciseIds.map(id => getExerciseById(id))
+        );
+      } else {
+        // If no exerciseIds, check for exerciseInstances (enhanced templates)
+        const instances = await getExerciseInstancesByTemplateId(template.id);
+        if (instances && instances.length > 0) {
+          // Get unique exercise IDs from instances, filtering out null/undefined
+          const uniqueExerciseIds = [...new Set(instances.map(inst => inst.exerciseId).filter(id => id != null))];
+          if (uniqueExerciseIds.length > 0) {
+            exercises = await Promise.all(
+              uniqueExerciseIds.map(id => getExerciseById(id))
+            );
+          }
+        }
+      }
       
       // Initialize workout exercises with empty sets
       this.workoutExercises = exercises.filter(ex => ex).map(exercise => ({
@@ -1147,6 +1182,14 @@ export default {
               </svg>
             </div>
             <span v-if="currentView !== 'library'">Library</span>
+          </li>
+          <li class="bottom-nav-item" :class="{ active: currentView === 'programs' }" @click="navigate('programs')">
+            <div :class="{ 'nav-icon-container': currentView === 'programs' }">
+              <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/>
+              </svg>
+            </div>
+            <span v-if="currentView !== 'programs'">Programs</span>
           </li>
           <li class="bottom-nav-item" :class="{ active: currentView === 'templates' }" @click="navigate('templates')">
             <div :class="{ 'nav-icon-container': currentView === 'templates' }">
