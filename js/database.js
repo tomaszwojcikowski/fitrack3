@@ -88,10 +88,23 @@ export const getExerciseById = async (id) => {
 export const addWorkoutLog = async (logData) => {
   // Dexie transactions ensure data integrity
   return db.transaction('rw', db.workoutLogs, db.logPerformance, async () => {
-    const logId = await db.workoutLogs.add({
+    const logEntry = {
       date: logData.date,
       templateId: logData.templateId
-    });
+    };
+    
+    // Add program tracking fields if present
+    if (logData.programId) {
+      logEntry.programId = logData.programId;
+    }
+    if (logData.week) {
+      logEntry.week = logData.week;
+    }
+    if (logData.day) {
+      logEntry.day = logData.day;
+    }
+    
+    const logId = await db.workoutLogs.add(logEntry);
 
     const performanceData = logData.performance.map(p => ({
       ...p,
