@@ -17,6 +17,7 @@ template.innerHTML = `
       padding: 1rem 2rem;
       max-width: 1200px;
       margin: 0 auto;
+      position: relative;
     }
     
     .brand {
@@ -27,6 +28,12 @@ template.innerHTML = `
       font-weight: 700;
       cursor: pointer;
       user-select: none;
+      z-index: 11;
+      transition: transform 0.2s;
+    }
+    
+    .brand:hover {
+      transform: scale(1.02);
     }
     
     .brand-icon {
@@ -49,6 +56,7 @@ template.innerHTML = `
       transition: background-color 0.2s;
       font-weight: 500;
       user-select: none;
+      white-space: nowrap;
     }
     
     .nav-link:hover {
@@ -59,26 +67,110 @@ template.innerHTML = `
       background-color: rgba(255, 255, 255, 0.2);
     }
     
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.75rem;
+      cursor: pointer;
+      padding: 0.5rem;
+      z-index: 11;
+      line-height: 1;
+      width: 44px;
+      height: 44px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+    
+    .menu-toggle:hover {
+      background-color: rgba(255, 255, 255, 0.15);
+      transform: scale(1.05);
+    }
+    
+    .menu-toggle:active {
+      transform: scale(0.95);
+    }
+    
     @media (max-width: 768px) {
       .navbar {
         padding: 1rem;
       }
       
-      .nav-links {
-        gap: 0.25rem;
-      }
-      
-      .nav-link {
-        padding: 0.5rem 0.75rem;
-        font-size: 0.875rem;
-      }
-      
       .brand {
         font-size: 1.25rem;
       }
+      
+      .menu-toggle {
+        display: flex;
+      }
+      
+      .nav-links {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 70%;
+        max-width: 300px;
+        height: 100vh;
+        background: #1565c0;
+        flex-direction: column;
+        padding: 5rem 0 2rem;
+        gap: 0;
+        box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
+        transition: right 0.3s ease-in-out;
+        z-index: 10;
+        overflow-y: auto;
+      }
+      
+      .nav-links.open {
+        right: 0;
+      }
+      
+      .nav-link {
+        padding: 1rem 1.5rem;
+        font-size: 1rem;
+        border-radius: 0;
+        width: 100%;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        /* Ensure proper touch target size */
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+      }
+      
+      .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.15);
+      }
+      
+      .nav-link.active {
+        background-color: rgba(255, 255, 255, 0.25);
+      }
+    }
+    
+    /* Overlay for mobile menu */
+    .overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 9;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+    
+    .overlay.open {
+      display: block;
+      opacity: 1;
     }
   </style>
   
+  <div class="overlay"></div>
   <nav class="navbar">
     <div class="brand" data-view="home">
       <svg class="brand-icon" viewBox="0 0 24 24" fill="white">
@@ -87,9 +179,14 @@ template.innerHTML = `
       <span>FiTrack3</span>
     </div>
     
+    <button class="menu-toggle" aria-label="Toggle menu">
+      <span>☰</span>
+    </button>
+    
     <ul class="nav-links">
       <li class="nav-link" data-view="home">Home</li>
       <li class="nav-link" data-view="library">Library</li>
+      <li class="nav-link" data-view="programs">Programs</li>
       <li class="nav-link" data-view="templates">Templates</li>
       <li class="nav-link" data-view="workout">Workout</li>
       <li class="nav-link" data-view="history">History</li>
@@ -104,11 +201,19 @@ class NavBar extends HTMLElement {
     this.attachShadow({ mode: 'open' });
     this.shadowRoot.appendChild(template.content.cloneNode(true));
     
+    this.menuOpen = false;
+    
+    // Get menu elements
+    this.menuToggle = this.shadowRoot.querySelector('.menu-toggle');
+    this.navLinks = this.shadowRoot.querySelector('.nav-links');
+    this.overlay = this.shadowRoot.querySelector('.overlay');
+    
     // Bind click handlers
     this.shadowRoot.addEventListener('click', (e) => {
       const target = e.target.closest('[data-view]');
       if (target) {
         const view = target.dataset.view;
+        this.closeMenu(); // Close menu when navigation happens
         this.dispatchEvent(new CustomEvent('navigate', {
           detail: { view },
           bubbles: true,
@@ -116,6 +221,35 @@ class NavBar extends HTMLElement {
         }));
       }
     });
+    
+    // Menu toggle handler
+    this.menuToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleMenu();
+    });
+    
+    // Overlay click closes menu
+    this.overlay.addEventListener('click', () => {
+      this.closeMenu();
+    });
+  }
+
+  toggleMenu() {
+    this.menuOpen = !this.menuOpen;
+    if (this.menuOpen) {
+      this.navLinks.classList.add('open');
+      this.overlay.classList.add('open');
+      this.menuToggle.innerHTML = '<span>✕</span>';
+    } else {
+      this.closeMenu();
+    }
+  }
+  
+  closeMenu() {
+    this.menuOpen = false;
+    this.navLinks.classList.remove('open');
+    this.overlay.classList.remove('open');
+    this.menuToggle.innerHTML = '<span>☰</span>';
   }
 
   set currentView(view) {
