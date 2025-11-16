@@ -316,7 +316,12 @@ export default {
         }
         
         alert('Workout saved successfully!');
-        this.cancelWorkout();
+        
+        // Clear workout state without confirmation
+        this.activeWorkout = null;
+        this.workoutExercises = [];
+        this.activeProgram = null;
+        
         this.navigate('history');
       } catch (error) {
         console.error('Failed to save workout:', error);

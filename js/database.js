@@ -16,12 +16,6 @@ db.version(1).stores({
 
 // Version 2: Add programs table for structured workout programs with weeks/days
 db.version(2).stores({
-  exercises: '++id, name, muscleGroup, type, equipment',
-  exerciseVariations: '++id, &exerciseId, name, difficulty',
-  workoutTemplates: '++id, name, *exerciseIds',
-  workoutLogs: '++id, date, templateId, programId, week, day',
-  logPerformance: '++id, logId, exerciseId',
-  userSettings: 'id',
   programs: '++id, name, description, durationWeeks',
   programProgress: 'id, programId, currentWeek, currentDay, startDate, lastWorkoutDate'
 });
