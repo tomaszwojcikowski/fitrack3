@@ -90,6 +90,7 @@ template.innerHTML = `
     <ul class="nav-links">
       <li class="nav-link" data-view="home">Home</li>
       <li class="nav-link" data-view="library">Library</li>
+      <li class="nav-link" data-view="templates">Templates</li>
       <li class="nav-link" data-view="workout">Workout</li>
       <li class="nav-link" data-view="history">History</li>
     </ul>
