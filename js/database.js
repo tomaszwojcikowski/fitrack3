@@ -1,5 +1,5 @@
-// Import Dexie from its ESM build CDN
-import Dexie from 'https://unpkg.com/dexie@3.2.4/dist/dexie.mjs';
+// Import Dexie from local ESM build
+import Dexie from '../vendor/dexie.js';
 
 // 1. Initialize the database
 const db = new Dexie('WorkoutAppDB');

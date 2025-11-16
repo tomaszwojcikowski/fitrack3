@@ -17,11 +17,13 @@ This application follows a unique "zero-build" architecture as outlined in the [
 
 ### Core Technologies
 
-1. **Vue.js 3 ESM Build** - Reactive framework loaded directly from CDN
+1. **Vue.js 3 ESM Build** - Reactive framework loaded from local vendor directory
 2. **Vanilla Web Components** - Native browser components for UI
 3. **Dexie.js** - High-performance IndexedDB wrapper for data persistence
 4. **GSAP** - Professional-grade animations
 5. **Mocha.js + Playwright** - Comprehensive testing strategy
+
+All JavaScript libraries are stored locally in the `/vendor` directory - no CDN dependencies.
 
 ### Hybrid Component Model
 
