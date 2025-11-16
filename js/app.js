@@ -19,7 +19,16 @@ import {
   getProgramProgress,
   updateProgramProgress,
   resetProgramProgress,
-  getTemplateById
+  getTemplateById,
+  // New functions for enhanced program support
+  addBlock,
+  getBlocksByProgramId,
+  addMobilityFlow,
+  getAllMobilityFlows,
+  getMobilityFlowById,
+  addExerciseInstance,
+  getExerciseInstancesByTemplateId,
+  getExerciseInstancesByPhase
 } from './database.js';
 
 // Import Web Components
