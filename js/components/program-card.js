@@ -23,6 +23,18 @@ class ProgramCard extends HTMLElement {
       ? Object.keys(program.schedule[1]).length 
       : 0;
     
+    // Determine current block based on progress
+    const currentBlock = program.blocks && progress 
+      ? program.blocks.find(b => 
+          progress.currentWeek >= b.weekStart && 
+          progress.currentWeek <= b.weekEnd
+        )
+      : null;
+    
+    const blocksInfo = program.blocks && program.blocks.length > 0
+      ? program.blocks.map(b => `${b.name} (Weeks ${b.weekStart}-${b.weekEnd})`).join(' → ')
+      : '';
+    
     this.shadowRoot.innerHTML = `
       <style>
         :host {
@@ -109,6 +121,28 @@ class ProgramCard extends HTMLElement {
           color: var(--success-color, #4CAF50);
         }
         
+        .current-block {
+          font-size: 0.85rem;
+          color: var(--text-secondary, #666);
+          margin-top: 4px;
+          font-style: italic;
+        }
+        
+        .blocks-info {
+          background: var(--background, #f5f5f5);
+          padding: 12px;
+          border-radius: 6px;
+          margin-bottom: 16px;
+          border: 1px solid var(--border-color, #e0e0e0);
+        }
+        
+        .blocks-progression {
+          font-size: 0.85rem;
+          color: var(--text-secondary, #666);
+          line-height: 1.6;
+          margin-top: 4px;
+        }
+        
         .program-actions {
           display: flex;
           gap: 8px;
@@ -180,12 +214,28 @@ class ProgramCard extends HTMLElement {
             <div class="info-label">Days/Week</div>
             <div class="info-value">${daysPerWeek}</div>
           </div>
+          ${program.blocks && program.blocks.length > 0 ? `
+            <div class="info-item">
+              <div class="info-label">Blocks</div>
+              <div class="info-value">${program.blocks.length}</div>
+            </div>
+          ` : ''}
         </div>
+        
+        ${blocksInfo ? `
+          <div class="blocks-info">
+            <div class="info-label">Program Structure</div>
+            <div class="blocks-progression">${blocksInfo}</div>
+          </div>
+        ` : ''}
         
         ${progress ? `
           <div class="progress-info">
             <div class="progress-label">Current Progress</div>
             <div class="progress-value">${progressText}</div>
+            ${currentBlock ? `
+              <div class="current-block">Block: ${currentBlock.name}</div>
+            ` : ''}
           </div>
         ` : ''}
         

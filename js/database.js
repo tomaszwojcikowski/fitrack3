@@ -20,6 +20,28 @@ db.version(2).stores({
   programProgress: 'id, programId, currentWeek, currentDay, startDate, lastWorkoutDate'
 });
 
+// Version 3: Enhanced schema for complex programs (20-week integration)
+db.version(3).stores({
+  exercises: '++id, name, muscleGroup, type, equipment',
+  exerciseVariations: '++id, &exerciseId, name, difficulty',
+  workoutTemplates: '++id, name, *exerciseIds',
+  workoutLogs: '++id, date, templateId',
+  logPerformance: '++id, logId, exerciseId',
+  userSettings: 'id',
+  programs: '++id, name, description, durationWeeks',
+  programProgress: 'id, programId, currentWeek, currentDay, startDate, lastWorkoutDate',
+  // New tables for enhanced program support
+  blocks: '++id, programId, blockNumber, name',
+  mobilityFlows: '++id, name, flowNumber',
+  exerciseInstances: '++id, templateId, exerciseId, phase, label'
+}).upgrade(tx => {
+  // Migration: Add new fields to existing exercises
+  return tx.table('exercises').toCollection().modify(exercise => {
+    if (!exercise.instructions) exercise.instructions = '';
+    if (!exercise.coachNotes) exercise.coachNotes = '';
+  });
+});
+
 // 3. Export the database instance for testing
 export { db };
 
@@ -399,4 +421,108 @@ export const seedDatabase = async () => {
       }
     ]);
   }
+};
+
+/**
+ * Add a block to a program
+ * @param {Object} block - Block object with programId, blockNumber, name, goals, skillA, skillB, weekStart, weekEnd
+ * @returns {Promise<number>} The ID of the newly created block
+ */
+export const addBlock = async (block) => {
+  return db.blocks.add(block);
+};
+
+/**
+ * Get blocks for a program
+ * @param {number} programId - Program ID
+ * @returns {Promise<Array>} Array of blocks
+ */
+export const getBlocksByProgramId = async (programId) => {
+  return db.blocks.where('programId').equals(programId).sortBy('blockNumber');
+};
+
+/**
+ * Add a mobility flow
+ * @param {Object} flow - Flow object with name, flowNumber, description, steps
+ * @returns {Promise<number>} The ID of the newly created flow
+ */
+export const addMobilityFlow = async (flow) => {
+  return db.mobilityFlows.add(flow);
+};
+
+/**
+ * Get all mobility flows
+ * @returns {Promise<Array>} Array of mobility flows
+ */
+export const getAllMobilityFlows = async () => {
+  return db.mobilityFlows.orderBy('flowNumber').toArray();
+};
+
+/**
+ * Get a mobility flow by ID
+ * @param {number} id - Flow ID
+ * @returns {Promise<Object>} Flow object
+ */
+export const getMobilityFlowById = async (id) => {
+  return db.mobilityFlows.get(id);
+};
+
+/**
+ * Add an exercise instance to a template
+ * @param {Object} instance - Exercise instance with templateId, exerciseId, phase, label, sets, reps, rest, weight, etc.
+ * @returns {Promise<number>} The ID of the newly created instance
+ */
+export const addExerciseInstance = async (instance) => {
+  return db.exerciseInstances.add(instance);
+};
+
+/**
+ * Get exercise instances for a template
+ * @param {number} templateId - Template ID
+ * @returns {Promise<Array>} Array of exercise instances
+ */
+export const getExerciseInstancesByTemplateId = async (templateId) => {
+  return db.exerciseInstances.where('templateId').equals(templateId).toArray();
+};
+
+/**
+ * Get exercise instances for a template grouped by phase
+ * @param {number} templateId - Template ID
+ * @returns {Promise<Object>} Object with phases as keys and arrays of instances as values
+ */
+export const getExerciseInstancesByPhase = async (templateId) => {
+  const instances = await getExerciseInstancesByTemplateId(templateId);
+  const grouped = {
+    prepare: [],
+    practice: [],
+    perform: [],
+    ponder: []
+  };
+  
+  instances.forEach(instance => {
+    if (grouped[instance.phase]) {
+      grouped[instance.phase].push(instance);
+    }
+  });
+  
+  return grouped;
+};
+
+/**
+ * Update an exercise instance
+ * @param {number} id - Instance ID
+ * @param {Object} updates - Object with fields to update
+ * @returns {Promise<number>} Number of updated records
+ */
+export const updateExerciseInstance = async (id, updates) => {
+  return db.exerciseInstances.update(id, updates);
+};
+
+/**
+ * Delete an exercise instance
+ * @param {number} id - Instance ID
+ * @returns {Promise<void>}
+ */
+export const deleteExerciseInstance = async (id) => {
+  return db.exerciseInstances.delete(id);
 };
