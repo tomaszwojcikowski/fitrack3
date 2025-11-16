@@ -143,7 +143,10 @@ class TemplateCard extends HTMLElement {
     this._templateId = data.id;
     this.shadowRoot.querySelector('#name').textContent = data.name;
     
-    const exerciseCount = data.exerciseIds ? data.exerciseIds.length : 0;
+    // Check exercises array first (for enhanced templates), then fall back to exerciseIds
+    const exerciseCount = data.exercises && data.exercises.length > 0 
+      ? data.exercises.length 
+      : (data.exerciseIds ? data.exerciseIds.length : 0);
     this.shadowRoot.querySelector('#exercise-count').textContent = `${exerciseCount} exercise${exerciseCount !== 1 ? 's' : ''}`;
     
     // Display exercise names if provided
