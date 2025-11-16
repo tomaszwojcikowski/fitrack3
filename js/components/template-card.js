@@ -5,16 +5,16 @@ template.innerHTML = `
     /* Encapsulated styles via Shadow DOM */
     :host {
       display: block;
-      border: 1px solid #e0e0e0;
+      border: 1px solid var(--border-color, #e0e0e0);
       border-radius: 8px;
       padding: 1rem;
-      background: white;
+      background: var(--surface, white);
       transition: transform 0.2s, box-shadow 0.2s;
     }
     
     :host(:hover) {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.1));
     }
     
     .card-header {
@@ -27,7 +27,7 @@ template.innerHTML = `
     h3 {
       margin: 0;
       font-size: 1.125rem;
-      color: #1a1a1a;
+      color: var(--text-primary, #1a1a1a);
       font-weight: 600;
     }
     
@@ -37,8 +37,8 @@ template.innerHTML = `
       border-radius: 4px;
       font-size: 0.75rem;
       font-weight: 500;
-      background-color: #e3f2fd;
-      color: #1976d2;
+      background-color: rgba(59, 130, 246, 0.15);
+      color: var(--primary-light, #3b82f6);
     }
     
     .card-body {
@@ -49,14 +49,14 @@ template.innerHTML = `
     
     .exercise-list {
       font-size: 0.875rem;
-      color: #666;
+      color: var(--text-secondary, #666);
       line-height: 1.5;
     }
     
     .card-footer {
       margin-top: 1rem;
       padding-top: 1rem;
-      border-top: 1px solid #e0e0e0;
+      border-top: 1px solid var(--border-color, #e0e0e0);
       display: flex;
       gap: 0.5rem;
     }
@@ -72,25 +72,26 @@ template.innerHTML = `
     }
     
     .btn-primary {
-      background-color: #1976d2;
+      background-color: var(--primary-color, #1976d2);
       color: white;
     }
     
     .btn-primary:hover {
-      background-color: #115293;
+      background-color: var(--primary-dark, #115293);
     }
     
     .btn-secondary {
-      background-color: #f5f5f5;
-      color: #1a1a1a;
+      background-color: var(--background, #f5f5f5);
+      color: var(--text-primary, #1a1a1a);
+      border: 1px solid var(--border-color, #e0e0e0);
     }
     
     .btn-secondary:hover {
-      background-color: #e0e0e0;
+      background-color: var(--surface-elevated, #e0e0e0);
     }
     
     .btn-danger {
-      background-color: #f44336;
+      background-color: var(--danger-color, #f44336);
       color: white;
     }
     
