@@ -14,6 +14,18 @@ db.version(1).stores({
   userSettings: 'id'
 });
 
+// Version 2: Add programs table for structured workout programs with weeks/days
+db.version(2).stores({
+  exercises: '++id, name, muscleGroup, type, equipment',
+  exerciseVariations: '++id, &exerciseId, name, difficulty',
+  workoutTemplates: '++id, name, *exerciseIds',
+  workoutLogs: '++id, date, templateId, programId, week, day',
+  logPerformance: '++id, logId, exerciseId',
+  userSettings: 'id',
+  programs: '++id, name, description, durationWeeks',
+  programProgress: 'id, programId, currentWeek, currentDay, startDate, lastWorkoutDate'
+});
+
 // 3. Export the database instance for testing
 export { db };
 
@@ -195,6 +207,100 @@ export const saveUserSettings = async (key = 'default', settings) => {
 };
 
 /**
+ * Add a program
+ * @param {Object} program - Program object with name, description, durationWeeks, and schedule
+ * @returns {Promise<number>} The ID of the newly created program
+ */
+export const addProgram = async (program) => {
+  return db.programs.add(program);
+};
+
+/**
+ * Get all programs
+ * @returns {Promise<Array>} Array of programs
+ */
+export const getAllPrograms = async () => {
+  return db.programs.toArray();
+};
+
+/**
+ * Get a program by ID
+ * @param {number} id - Program ID
+ * @returns {Promise<Object>} Program object
+ */
+export const getProgramById = async (id) => {
+  return db.programs.get(id);
+};
+
+/**
+ * Update a program
+ * @param {number} id - Program ID
+ * @param {Object} updates - Object with fields to update
+ * @returns {Promise<number>} Number of updated records
+ */
+export const updateProgram = async (id, updates) => {
+  return db.programs.update(id, updates);
+};
+
+/**
+ * Delete a program
+ * @param {number} id - Program ID
+ * @returns {Promise<void>}
+ */
+export const deleteProgram = async (id) => {
+  return db.programs.delete(id);
+};
+
+/**
+ * Get or initialize program progress
+ * @param {number} programId - Program ID
+ * @returns {Promise<Object>} Program progress object
+ */
+export const getProgramProgress = async (programId) => {
+  let progress = await db.programProgress.get(programId);
+  if (!progress) {
+    // Initialize progress
+    progress = {
+      id: programId,
+      programId: programId,
+      currentWeek: 1,
+      currentDay: 1,
+      startDate: new Date().toISOString(),
+      lastWorkoutDate: null
+    };
+    await db.programProgress.put(progress);
+  }
+  return progress;
+};
+
+/**
+ * Update program progress
+ * @param {number} programId - Program ID
+ * @param {Object} updates - Object with fields to update
+ * @returns {Promise<number>} Number of updated records
+ */
+export const updateProgramProgress = async (programId, updates) => {
+  const progress = await getProgramProgress(programId);
+  return db.programProgress.put({ ...progress, ...updates });
+};
+
+/**
+ * Reset program progress
+ * @param {number} programId - Program ID
+ * @returns {Promise<void>}
+ */
+export const resetProgramProgress = async (programId) => {
+  return db.programProgress.put({
+    id: programId,
+    programId: programId,
+    currentWeek: 1,
+    currentDay: 1,
+    startDate: new Date().toISOString(),
+    lastWorkoutDate: null
+  });
+};
+
+/**
  * Seed the database with initial data for testing/demo purposes
  * @returns {Promise<void>}
  */
@@ -214,6 +320,76 @@ export const seedDatabase = async () => {
       { name: 'Lunges', muscleGroup: 'Legs', type: 'Compound', equipment: 'Dumbbell' },
       { name: 'Bicep Curls', muscleGroup: 'Arms', type: 'Isolation', equipment: 'Dumbbell' },
       { name: 'Tricep Extensions', muscleGroup: 'Arms', type: 'Isolation', equipment: 'Dumbbell' }
+    ]);
+  }
+  
+  const programCount = await db.programs.count();
+  
+  // Seed sample programs if none exist
+  if (programCount === 0) {
+    // Get exercise IDs for program templates
+    const exercises = await db.exercises.toArray();
+    const squatId = exercises.find(e => e.name === 'Squat')?.id;
+    const benchPressId = exercises.find(e => e.name === 'Bench Press')?.id;
+    const deadliftId = exercises.find(e => e.name === 'Deadlift')?.id;
+    const overheadPressId = exercises.find(e => e.name === 'Overhead Press')?.id;
+    const barbellRowId = exercises.find(e => e.name === 'Barbell Row')?.id;
+    const pullUpsId = exercises.find(e => e.name === 'Pull-ups')?.id;
+    const dipsId = exercises.find(e => e.name === 'Dips')?.id;
+    const lungesId = exercises.find(e => e.name === 'Lunges')?.id;
+    
+    // Create templates for the programs
+    const pushDayId = await db.workoutTemplates.add({
+      name: 'Push Day',
+      exerciseIds: [benchPressId, overheadPressId, dipsId].filter(id => id)
+    });
+    
+    const pullDayId = await db.workoutTemplates.add({
+      name: 'Pull Day',
+      exerciseIds: [deadliftId, barbellRowId, pullUpsId].filter(id => id)
+    });
+    
+    const legDayId = await db.workoutTemplates.add({
+      name: 'Leg Day',
+      exerciseIds: [squatId, lungesId].filter(id => id)
+    });
+    
+    const upperBodyId = await db.workoutTemplates.add({
+      name: 'Upper Body',
+      exerciseIds: [benchPressId, barbellRowId, overheadPressId].filter(id => id)
+    });
+    
+    const lowerBodyId = await db.workoutTemplates.add({
+      name: 'Lower Body',
+      exerciseIds: [squatId, deadliftId, lungesId].filter(id => id)
+    });
+    
+    // Add sample programs
+    await db.programs.bulkAdd([
+      {
+        name: 'Beginner Full Body',
+        description: 'A 4-week full body program for beginners, training 3 days per week',
+        durationWeeks: 4,
+        schedule: {
+          1: { 1: upperBodyId, 2: lowerBodyId, 3: upperBodyId },
+          2: { 1: lowerBodyId, 2: upperBodyId, 3: lowerBodyId },
+          3: { 1: upperBodyId, 2: lowerBodyId, 3: upperBodyId },
+          4: { 1: lowerBodyId, 2: upperBodyId, 3: lowerBodyId }
+        }
+      },
+      {
+        name: 'Push Pull Legs',
+        description: 'A 6-week push/pull/legs split, training 6 days per week',
+        durationWeeks: 6,
+        schedule: {
+          1: { 1: pushDayId, 2: pullDayId, 3: legDayId, 4: pushDayId, 5: pullDayId, 6: legDayId },
+          2: { 1: pushDayId, 2: pullDayId, 3: legDayId, 4: pushDayId, 5: pullDayId, 6: legDayId },
+          3: { 1: pushDayId, 2: pullDayId, 3: legDayId, 4: pushDayId, 5: pullDayId, 6: legDayId },
+          4: { 1: pushDayId, 2: pullDayId, 3: legDayId, 4: pushDayId, 5: pullDayId, 6: legDayId },
+          5: { 1: pushDayId, 2: pullDayId, 3: legDayId, 4: pushDayId, 5: pullDayId, 6: legDayId },
+          6: { 1: pushDayId, 2: pullDayId, 3: legDayId, 4: pushDayId, 5: pullDayId, 6: legDayId }
+        }
+      }
     ]);
   }
 };
