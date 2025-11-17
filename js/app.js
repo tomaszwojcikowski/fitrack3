@@ -75,6 +75,7 @@ export default {
       dbAvailable: true,
       dbError: null,
       dbDiagnostics: null,
+      loadingDiagnostics: false,
       restTimer: {
         active: false,
         remaining: 0,
@@ -665,6 +666,7 @@ export default {
     },
     
     async loadDiagnostics() {
+      this.loadingDiagnostics = true;
       try {
         this.dbDiagnostics = await getDatabaseDiagnostics();
       } catch (error) {
@@ -673,6 +675,8 @@ export default {
           error: 'Failed to retrieve diagnostics',
           errorMessage: error.message
         };
+      } finally {
+        this.loadingDiagnostics = false;
       }
     },
     
@@ -1473,11 +1477,11 @@ export default {
                 <p class="about-text">Loading diagnostics...</p>
               </div>
               
-              <button @click="loadDiagnostics" class="btn btn-outline" style="width: 100%; margin-top: 1rem;">
-                <svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+              <button @click="loadDiagnostics" class="btn btn-outline" style="width: 100%; margin-top: 1rem;" :disabled="loadingDiagnostics">
+                <svg class="icon" viewBox="0 0 24 24" width="20" height="20" :style="{ animation: loadingDiagnostics ? 'spin 1s linear infinite' : 'none' }">
                   <path fill="currentColor" d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
                 </svg>
-                Refresh Diagnostics
+                {{ loadingDiagnostics ? 'Refreshing...' : 'Refresh Diagnostics' }}
               </button>
             </div>
             
