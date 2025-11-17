@@ -150,6 +150,11 @@ export async function getDatabaseDiagnostics() {
   // Try to get table counts if database is available
   if (dbAvailable) {
     try {
+      // Ensure database is open before attempting operations
+      if (!db.isOpen()) {
+        await db.open();
+      }
+      
       diagnostics.tableCounts = {
         exercises: await db.exercises.count(),
         templates: await db.workoutTemplates.count(),
@@ -157,6 +162,7 @@ export async function getDatabaseDiagnostics() {
         programs: await db.programs.count()
       };
     } catch (error) {
+      console.warn('Failed to retrieve table counts:', error);
       diagnostics.tableCounts = { error: 'Unable to retrieve table counts' };
     }
   }
