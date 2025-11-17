@@ -105,6 +105,16 @@ export function getDatabaseStatus() {
 
 // Get detailed database diagnostics for troubleshooting
 export async function getDatabaseDiagnostics() {
+  // Safely get database version - only if database is available and opened
+  let dbVersion = 'unknown';
+  try {
+    if (dbAvailable && db.isOpen()) {
+      dbVersion = db.verno;
+    }
+  } catch (error) {
+    console.warn('Could not retrieve database version:', error);
+  }
+
   const diagnostics = {
     indexedDBSupported: typeof window.indexedDB !== 'undefined',
     dbAvailable: dbAvailable,
@@ -113,7 +123,7 @@ export async function getDatabaseDiagnostics() {
       message: dbError.message
     } : null,
     dbName: 'WorkoutAppDB',
-    dbVersion: db.verno || 'unknown',
+    dbVersion: dbVersion,
     userAgent: navigator.userAgent,
     platform: navigator.platform,
     vendor: navigator.vendor || 'unknown',
