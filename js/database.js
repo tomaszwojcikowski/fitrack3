@@ -103,6 +103,16 @@ export function getDatabaseStatus() {
   };
 }
 
+// Helper function to add timeout to promises (for Android compatibility)
+function withTimeout(promise, timeoutMs = 5000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Operation timed out')), timeoutMs)
+    )
+  ]);
+}
+
 // Get detailed database diagnostics for troubleshooting
 export async function getDatabaseDiagnostics() {
   // Safely get database version - only if database is available and opened
@@ -131,10 +141,10 @@ export async function getDatabaseDiagnostics() {
     lastCheck: new Date().toISOString()
   };
 
-  // Try to get storage quota information
+  // Try to get storage quota information with timeout
   if (navigator.storage && navigator.storage.estimate) {
     try {
-      const estimate = await navigator.storage.estimate();
+      const estimate = await withTimeout(navigator.storage.estimate(), 3000);
       diagnostics.storageEstimate = {
         usage: estimate.usage || 0,
         quota: estimate.quota || 0,
@@ -143,27 +153,36 @@ export async function getDatabaseDiagnostics() {
         percentUsed: estimate.quota ? ((estimate.usage / estimate.quota) * 100).toFixed(2) : 0
       };
     } catch (error) {
-      diagnostics.storageEstimate = { error: 'Unable to retrieve storage estimate' };
+      console.warn('Storage estimate failed or timed out:', error.message);
+      diagnostics.storageEstimate = { error: 'Unable to retrieve storage estimate: ' + error.message };
     }
   }
 
-  // Try to get table counts if database is available
+  // Try to get table counts if database is available with timeout
   if (dbAvailable) {
     try {
       // Ensure database is open before attempting operations
       if (!db.isOpen()) {
-        await db.open();
+        await withTimeout(db.open(), 3000);
       }
       
+      // Get all counts with individual timeouts to prevent hanging
+      const [exercises, templates, workoutLogs, programs] = await Promise.all([
+        withTimeout(db.exercises.count(), 2000).catch(e => { console.warn('Exercises count timeout'); return 0; }),
+        withTimeout(db.workoutTemplates.count(), 2000).catch(e => { console.warn('Templates count timeout'); return 0; }),
+        withTimeout(db.workoutLogs.count(), 2000).catch(e => { console.warn('Workout logs count timeout'); return 0; }),
+        withTimeout(db.programs.count(), 2000).catch(e => { console.warn('Programs count timeout'); return 0; })
+      ]);
+      
       diagnostics.tableCounts = {
-        exercises: await db.exercises.count(),
-        templates: await db.workoutTemplates.count(),
-        workoutLogs: await db.workoutLogs.count(),
-        programs: await db.programs.count()
+        exercises,
+        templates,
+        workoutLogs,
+        programs
       };
     } catch (error) {
-      console.warn('Failed to retrieve table counts:', error);
-      diagnostics.tableCounts = { error: 'Unable to retrieve table counts' };
+      console.warn('Failed to retrieve table counts:', error.message);
+      diagnostics.tableCounts = { error: 'Unable to retrieve table counts: ' + error.message };
     }
   }
 
