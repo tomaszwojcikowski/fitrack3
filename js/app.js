@@ -30,7 +30,8 @@ import {
   getExerciseInstancesByTemplateId,
   getExerciseInstancesByPhase,
   // Database availability checking
-  checkDatabaseAvailability
+  checkDatabaseAvailability,
+  getDatabaseDiagnostics
 } from './database.js';
 
 // Import the 20-week program seeder
@@ -73,6 +74,7 @@ export default {
       currentTab: 'templates',
       dbAvailable: true,
       dbError: null,
+      dbDiagnostics: null,
       restTimer: {
         active: false,
         remaining: 0,
@@ -187,6 +189,7 @@ export default {
               this.loadWorkoutHistory();
             } else if (view === 'settings') {
               this.loadSettings();
+              this.loadDiagnostics();
             }
             // Animate in new view
             this.$nextTick(() => {
@@ -211,6 +214,7 @@ export default {
           this.loadWorkoutHistory();
         } else if (view === 'settings') {
           this.loadSettings();
+          this.loadDiagnostics();
         }
       }
     },
@@ -656,6 +660,18 @@ export default {
           branch: 'unknown',
           buildDate: 'unknown',
           buildNumber: '0'
+        };
+      }
+    },
+    
+    async loadDiagnostics() {
+      try {
+        this.dbDiagnostics = await getDatabaseDiagnostics();
+      } catch (error) {
+        console.error('Failed to load diagnostics:', error);
+        this.dbDiagnostics = {
+          error: 'Failed to retrieve diagnostics',
+          errorMessage: error.message
         };
       }
     },
@@ -1369,6 +1385,100 @@ export default {
               <p v-else class="about-text">
                 Version 1.0.0-dev
               </p>
+            </div>
+            
+            <div class="settings-section">
+              <h2>Database Diagnostics</h2>
+              <p class="about-text">
+                Diagnostic information for troubleshooting database issues on mobile devices.
+              </p>
+              
+              <div v-if="dbDiagnostics" class="diagnostics-container">
+                <!-- Database Status -->
+                <div class="diagnostic-item">
+                  <div class="diagnostic-label">Database Status:</div>
+                  <div class="diagnostic-value">
+                    <span :class="['status-badge', dbDiagnostics.dbAvailable ? 'status-success' : 'status-error']">
+                      {{ dbDiagnostics.dbAvailable ? '✓ Available' : '✗ Unavailable' }}
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- IndexedDB Support -->
+                <div class="diagnostic-item">
+                  <div class="diagnostic-label">IndexedDB Support:</div>
+                  <div class="diagnostic-value">
+                    <span :class="['status-badge', dbDiagnostics.indexedDBSupported ? 'status-success' : 'status-error']">
+                      {{ dbDiagnostics.indexedDBSupported ? '✓ Supported' : '✗ Not Supported' }}
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Error Details -->
+                <div v-if="dbDiagnostics.dbError" class="diagnostic-item">
+                  <div class="diagnostic-label">Error Details:</div>
+                  <div class="diagnostic-value error-details">
+                    <strong>{{ dbDiagnostics.dbError.name }}</strong>
+                    <br>
+                    <span class="error-message">{{ dbDiagnostics.dbError.message }}</span>
+                  </div>
+                </div>
+                
+                <!-- Storage Information -->
+                <div v-if="dbDiagnostics.storageEstimate && !dbDiagnostics.storageEstimate.error" class="diagnostic-item">
+                  <div class="diagnostic-label">Storage Usage:</div>
+                  <div class="diagnostic-value">
+                    {{ dbDiagnostics.storageEstimate.usageInMB }} MB / {{ dbDiagnostics.storageEstimate.quotaInMB }} MB
+                    ({{ dbDiagnostics.storageEstimate.percentUsed }}% used)
+                  </div>
+                </div>
+                
+                <!-- Table Counts -->
+                <div v-if="dbDiagnostics.tableCounts && !dbDiagnostics.tableCounts.error" class="diagnostic-item">
+                  <div class="diagnostic-label">Data Records:</div>
+                  <div class="diagnostic-value">
+                    Exercises: {{ dbDiagnostics.tableCounts.exercises }}, 
+                    Templates: {{ dbDiagnostics.tableCounts.templates }}, 
+                    Workouts: {{ dbDiagnostics.tableCounts.workoutLogs }}, 
+                    Programs: {{ dbDiagnostics.tableCounts.programs }}
+                  </div>
+                </div>
+                
+                <!-- Database Info -->
+                <div class="diagnostic-item">
+                  <div class="diagnostic-label">Database Name:</div>
+                  <div class="diagnostic-value">{{ dbDiagnostics.dbName }} (v{{ dbDiagnostics.dbVersion }})</div>
+                </div>
+                
+                <!-- Browser Info -->
+                <div class="diagnostic-item">
+                  <div class="diagnostic-label">Browser:</div>
+                  <div class="diagnostic-value browser-info">{{ dbDiagnostics.userAgent }}</div>
+                </div>
+                
+                <!-- Platform Info -->
+                <div class="diagnostic-item">
+                  <div class="diagnostic-label">Platform:</div>
+                  <div class="diagnostic-value">{{ dbDiagnostics.platform }}</div>
+                </div>
+                
+                <!-- Last Check -->
+                <div class="diagnostic-item">
+                  <div class="diagnostic-label">Last Check:</div>
+                  <div class="diagnostic-value">{{ new Date(dbDiagnostics.lastCheck).toLocaleString() }}</div>
+                </div>
+              </div>
+              
+              <div v-else class="diagnostics-loading">
+                <p class="about-text">Loading diagnostics...</p>
+              </div>
+              
+              <button @click="loadDiagnostics" class="btn btn-outline" style="width: 100%; margin-top: 1rem;">
+                <svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+                  <path fill="currentColor" d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
+                </svg>
+                Refresh Diagnostics
+              </button>
             </div>
             
             <div class="settings-actions">
