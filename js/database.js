@@ -103,6 +103,57 @@ export function getDatabaseStatus() {
   };
 }
 
+// Get detailed database diagnostics for troubleshooting
+export async function getDatabaseDiagnostics() {
+  const diagnostics = {
+    indexedDBSupported: typeof window.indexedDB !== 'undefined',
+    dbAvailable: dbAvailable,
+    dbError: dbError ? {
+      name: dbError.name,
+      message: dbError.message
+    } : null,
+    dbName: 'WorkoutAppDB',
+    dbVersion: db.verno || 'unknown',
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    vendor: navigator.vendor || 'unknown',
+    storageEstimate: null,
+    lastCheck: new Date().toISOString()
+  };
+
+  // Try to get storage quota information
+  if (navigator.storage && navigator.storage.estimate) {
+    try {
+      const estimate = await navigator.storage.estimate();
+      diagnostics.storageEstimate = {
+        usage: estimate.usage || 0,
+        quota: estimate.quota || 0,
+        usageInMB: ((estimate.usage || 0) / (1024 * 1024)).toFixed(2),
+        quotaInMB: ((estimate.quota || 0) / (1024 * 1024)).toFixed(2),
+        percentUsed: estimate.quota ? ((estimate.usage / estimate.quota) * 100).toFixed(2) : 0
+      };
+    } catch (error) {
+      diagnostics.storageEstimate = { error: 'Unable to retrieve storage estimate' };
+    }
+  }
+
+  // Try to get table counts if database is available
+  if (dbAvailable) {
+    try {
+      diagnostics.tableCounts = {
+        exercises: await db.exercises.count(),
+        templates: await db.workoutTemplates.count(),
+        workoutLogs: await db.workoutLogs.count(),
+        programs: await db.programs.count()
+      };
+    } catch (error) {
+      diagnostics.tableCounts = { error: 'Unable to retrieve table counts' };
+    }
+  }
+
+  return diagnostics;
+}
+
 // Export database instance and availability checker
 export { db, checkDatabaseAvailability, dbAvailable, dbError };
 

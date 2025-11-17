@@ -892,6 +892,97 @@ input[type="checkbox"] {
   font-weight: 600;
 }
 
+/* Database Diagnostics Styles */
+.diagnostics-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.diagnostic-item {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--md-surface-variant);
+  border-radius: var(--md-corner-sm);
+  font-size: 0.875rem;
+  align-items: start;
+}
+
+.diagnostic-label {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.diagnostic-value {
+  color: var(--text-secondary);
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.browser-info {
+  font-size: 0.75rem;
+  font-family: monospace;
+}
+
+.error-details {
+  color: var(--md-error);
+}
+
+.error-message {
+  font-size: 0.8125rem;
+  font-style: italic;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--md-corner-sm);
+  font-weight: 600;
+  font-size: 0.8125rem;
+}
+
+.status-success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.status-error {
+  background-color: var(--md-error-container);
+  color: var(--md-on-error-container);
+  border: 1px solid #f5c6cb;
+}
+
+.diagnostics-loading {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+}
+
+/* Mobile-friendly diagnostics on small screens */
+@media (max-width: 640px) {
+  .diagnostic-item {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .diagnostic-label {
+    font-size: 0.8125rem;
+  }
+  
+  .diagnostic-value {
+    font-size: 0.8125rem;
+    padding-left: 0;
+  }
+  
+  .browser-info {
+    font-size: 0.6875rem;
+  }
+}
+
 .settings-actions {
   display: flex;
   justify-content: center;
