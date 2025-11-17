@@ -115,10 +115,14 @@ function withTimeout(promise, timeoutMs = 5000) {
 
 // Get detailed database diagnostics for troubleshooting
 export async function getDatabaseDiagnostics() {
-  // Safely get database version - only if database is available and opened
+  // Safely get database version - ensure database is opened first
   let dbVersion = 'unknown';
   try {
-    if (dbAvailable && db.isOpen()) {
+    if (dbAvailable) {
+      // Ensure database is open before accessing version
+      if (!db.isOpen()) {
+        await db.open();
+      }
       dbVersion = db.verno;
     }
   } catch (error) {
