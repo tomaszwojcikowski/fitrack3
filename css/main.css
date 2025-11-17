@@ -1272,3 +1272,211 @@ input[type="checkbox"] {
     display: flex;
   }
 }
+
+/* ========================================
+   Enhanced Workout Features
+   ======================================== */
+
+/* Phase Headers */
+.phase-header {
+  margin: 2rem 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 3px solid var(--primary-color);
+}
+
+.phase-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  text-transform: capitalize;
+  margin: 0;
+}
+
+/* Exercise Labels (A1, B1, B2, C1) */
+.exercise-label-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.exercise-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.5rem;
+  height: 2.5rem;
+  background-color: var(--primary-color);
+  color: var(--md-on-primary);
+  font-weight: 700;
+  font-size: 1rem;
+  border-radius: var(--md-corner-full);
+  padding: 0 0.75rem;
+  flex-shrink: 0;
+}
+
+.exercise-label.label-superset {
+  background-color: var(--secondary-color);
+  color: var(--md-on-secondary);
+}
+
+/* Superset Item Styling */
+.exercise-item.superset-item {
+  border-left: 4px solid var(--secondary-color);
+  background: linear-gradient(to right, var(--md-secondary-container) 0%, var(--md-surface) 20px);
+}
+
+.exercise-info {
+  flex: 1;
+}
+
+/* Exercise Metadata Tags */
+.exercise-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.meta-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  background-color: var(--md-surface-variant);
+  color: var(--md-on-surface-variant);
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--md-corner-full);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.meta-tag.rest-tag {
+  background-color: var(--md-tertiary-container);
+  color: var(--md-on-tertiary-container);
+}
+
+/* Protocol Notes (EMOM, Ladder, etc.) */
+.protocol-notes {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background-color: var(--md-primary-container);
+  color: var(--md-on-primary-container);
+  border-radius: var(--md-corner-sm);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.protocol-notes .icon {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+/* Coach Notes */
+.coach-notes {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background-color: var(--md-tertiary-container);
+  color: var(--md-on-tertiary-container);
+  border-radius: var(--md-corner-sm);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.coach-notes .icon {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+/* Rest Timer Button */
+.rest-timer-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--md-tertiary-container);
+  color: var(--md-on-tertiary-container);
+  border: none;
+  border-radius: var(--md-corner-full);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--md-elevation-1);
+}
+
+.rest-timer-btn:hover {
+  background-color: var(--md-tertiary);
+  color: var(--md-on-tertiary);
+  box-shadow: var(--md-elevation-2);
+}
+
+.rest-timer-btn.timer-active {
+  background-color: var(--success-color);
+  color: white;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.rest-timer-btn .icon {
+  flex-shrink: 0;
+}
+
+/* Responsive adjustments for enhanced features */
+@media (max-width: 768px) {
+  .phase-title {
+    font-size: 1.25rem;
+  }
+  
+  .exercise-label {
+    min-width: 2rem;
+    height: 2rem;
+    font-size: 0.875rem;
+    padding: 0 0.5rem;
+  }
+  
+  .exercise-meta {
+    gap: 0.375rem;
+  }
+  
+  .meta-tag {
+    font-size: 0.625rem;
+    padding: 0.2rem 0.5rem;
+  }
+  
+  .protocol-notes,
+  .coach-notes {
+    font-size: 0.8125rem;
+    padding: 0.625rem;
+  }
+  
+  .rest-timer-btn {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+  }
+  
+  .exercise-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  
+  .rest-timer-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
