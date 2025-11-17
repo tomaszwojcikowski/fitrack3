@@ -72,7 +72,14 @@ export default {
       activeProgram: null,
       currentTab: 'templates',
       dbAvailable: true,
-      dbError: null
+      dbError: null,
+      restTimer: {
+        active: false,
+        remaining: 0,
+        total: 0,
+        exerciseIndex: null,
+        interval: null
+      }
     };
   },
   
@@ -350,6 +357,94 @@ export default {
         weight: '',
         completed: false
       });
+    },
+    
+    onSetCompleted(exerciseIndex, setIndex) {
+      const exercise = this.workoutExercises[exerciseIndex];
+      const set = exercise.sets[setIndex];
+      
+      // Auto-start rest timer when a set is completed
+      if (set.completed && exercise.rest && !exercise.rest.includes('EMOM')) {
+        this.startRestTimer(exercise.rest, exerciseIndex);
+      }
+    },
+    
+    startRestTimer(restTime, exerciseIndex) {
+      // Parse rest time (e.g., "120s", "90-120s", "2-3min")
+      let seconds = 0;
+      
+      if (restTime.includes('-')) {
+        // Take the middle value for ranges
+        const parts = restTime.split('-');
+        const lower = this.parseTimeToSeconds(parts[0].trim());
+        const upper = this.parseTimeToSeconds(parts[1].trim());
+        seconds = Math.floor((lower + upper) / 2);
+      } else {
+        seconds = this.parseTimeToSeconds(restTime);
+      }
+      
+      if (seconds === 0) return;
+      
+      // Clear any existing timer
+      if (this.restTimer.interval) {
+        clearInterval(this.restTimer.interval);
+      }
+      
+      // Start new timer
+      this.restTimer.active = true;
+      this.restTimer.remaining = seconds;
+      this.restTimer.total = seconds;
+      this.restTimer.exerciseIndex = exerciseIndex;
+      
+      this.restTimer.interval = setInterval(() => {
+        if (this.restTimer.remaining > 0) {
+          this.restTimer.remaining--;
+        } else {
+          // Timer finished
+          this.stopRestTimer();
+          // Play notification sound or vibrate
+          if ('vibrate' in navigator) {
+            navigator.vibrate([200, 100, 200]);
+          }
+          // Show notification
+          if (Notification.permission === 'granted') {
+            new Notification('Rest Complete!', {
+              body: 'Time to start your next set',
+              icon: '/fitrack3-home.png'
+            });
+          }
+        }
+      }, 1000);
+    },
+    
+    stopRestTimer() {
+      if (this.restTimer.interval) {
+        clearInterval(this.restTimer.interval);
+      }
+      this.restTimer.active = false;
+      this.restTimer.remaining = 0;
+      this.restTimer.total = 0;
+      this.restTimer.exerciseIndex = null;
+      this.restTimer.interval = null;
+    },
+    
+    parseTimeToSeconds(timeStr) {
+      timeStr = timeStr.toLowerCase().trim();
+      
+      // Handle minutes
+      if (timeStr.includes('min')) {
+        const mins = parseFloat(timeStr.replace(/[^0-9.]/g, ''));
+        return Math.floor(mins * 60);
+      }
+      
+      // Handle seconds
+      if (timeStr.includes('s')) {
+        return parseInt(timeStr.replace(/[^0-9]/g, ''));
+      }
+      
+      // Try to parse as number (assume seconds)
+      const num = parseInt(timeStr);
+      return isNaN(num) ? 0 : num;
     },
     
     async saveWorkout() {
@@ -737,31 +832,71 @@ export default {
         exercises = await Promise.all(
           template.exerciseIds.map(id => getExerciseById(id))
         );
+        
+        // Initialize workout exercises with empty sets (legacy format)
+        this.workoutExercises = exercises.filter(ex => ex).map(exercise => ({
+          exerciseId: exercise.id,
+          exerciseName: exercise.name,
+          muscleGroup: exercise.muscleGroup,
+          label: '',
+          rest: '',
+          notes: '',
+          coachNotes: exercise.coachNotes || '',
+          sets: [
+            { setNumber: 1, reps: '', weight: '', completed: false },
+            { setNumber: 2, reps: '', weight: '', completed: false },
+            { setNumber: 3, reps: '', weight: '', completed: false }
+          ]
+        }));
       } else {
         // If no exerciseIds, check for exerciseInstances (enhanced templates)
         const instances = await getExerciseInstancesByTemplateId(template.id);
         if (instances && instances.length > 0) {
-          // Get unique exercise IDs from instances, filtering out null/undefined
-          const uniqueExerciseIds = [...new Set(instances.map(inst => inst.exerciseId).filter(id => id != null))];
-          if (uniqueExerciseIds.length > 0) {
-            exercises = await Promise.all(
-              uniqueExerciseIds.map(id => getExerciseById(id))
-            );
+          // Group instances by phase to preserve program structure
+          const instancesByPhase = await getExerciseInstancesByPhase(template.id);
+          
+          // Create workout exercises from instances, preserving all metadata
+          this.workoutExercises = [];
+          const phases = ['prepare', 'practice', 'perform', 'ponder'];
+          
+          for (const phase of phases) {
+            const phaseInstances = instancesByPhase[phase] || [];
+            for (const instance of phaseInstances) {
+              if (!instance.exerciseId) continue;
+              
+              const exercise = await getExerciseById(instance.exerciseId);
+              if (!exercise) continue;
+              
+              // Parse sets information
+              const setsCount = instance.sets ? (instance.sets.includes('x') ? parseInt(instance.sets.split('x')[0]) : parseInt(instance.sets)) : 3;
+              const defaultSets = setsCount > 0 && setsCount < 20 ? setsCount : 3;
+              
+              this.workoutExercises.push({
+                exerciseId: exercise.id,
+                exerciseName: exercise.name,
+                muscleGroup: exercise.muscleGroup,
+                phase: phase,
+                label: instance.label || '',
+                rest: instance.rest || '',
+                notes: instance.notes || '',
+                reps: instance.reps || '',
+                time: instance.time || '',
+                weight: instance.weight || '',
+                coachNotes: exercise.coachNotes || '',
+                sets: Array.from({ length: defaultSets }, (_, i) => ({
+                  setNumber: i + 1,
+                  reps: '',
+                  weight: '',
+                  completed: false
+                }))
+              });
+            }
           }
+        } else {
+          // Fallback: simple template with no instances
+          this.workoutExercises = [];
         }
       }
-      
-      // Initialize workout exercises with empty sets
-      this.workoutExercises = exercises.filter(ex => ex).map(exercise => ({
-        exerciseId: exercise.id,
-        exerciseName: exercise.name,
-        muscleGroup: exercise.muscleGroup,
-        sets: [
-          { setNumber: 1, reps: '', weight: '', completed: false },
-          { setNumber: 2, reps: '', weight: '', completed: false },
-          { setNumber: 3, reps: '', weight: '', completed: false }
-        ]
-      }));
       
       // Navigate to workout view
       this.currentView = 'workout';
@@ -995,60 +1130,111 @@ export default {
             </header>
             
             <workout-session>
-              <div v-for="(exercise, exIndex) in workoutExercises" :key="exIndex" class="exercise-item">
-                <div class="exercise-header">
-                  <div>
-                    <h3 class="exercise-name">{{ exercise.exerciseName }}</h3>
-                    <p class="exercise-muscle">{{ exercise.muscleGroup }}</p>
-                  </div>
+              <template v-for="(exercise, exIndex) in workoutExercises" :key="exIndex">
+                <!-- Phase Header (only show when phase changes) -->
+                <div v-if="exIndex === 0 || exercise.phase !== workoutExercises[exIndex - 1].phase" class="phase-header">
+                  <h2 class="phase-title">{{ exercise.phase ? exercise.phase.charAt(0).toUpperCase() + exercise.phase.slice(1) : 'Perform' }}</h2>
                 </div>
                 
-                <div class="sets-list">
-                  <div 
-                    v-for="(set, setIndex) in exercise.sets" 
-                    :key="setIndex"
-                    class="set-row"
-                    :class="{ completed: set.completed }"
-                  >
-                    <span class="set-number">Set {{ set.setNumber }}</span>
-                    
-                    <div class="input-group">
-                      <label class="input-label">Reps</label>
-                      <input 
-                        type="number" 
-                        v-model="set.reps"
-                        :disabled="set.completed"
-                        min="1"
-                        placeholder="0"
-                      />
+                <div class="exercise-item" :class="{ 'superset-item': exercise.label && exercise.label.match(/B\d/) }">
+                  <div class="exercise-header">
+                    <div class="exercise-info">
+                      <div class="exercise-label-row">
+                        <span v-if="exercise.label" class="exercise-label" :class="{ 'label-superset': exercise.label.match(/B\d/) }">
+                          {{ exercise.label }}
+                        </span>
+                        <h3 class="exercise-name">{{ exercise.exerciseName }}</h3>
+                      </div>
+                      <p class="exercise-muscle">{{ exercise.muscleGroup }}</p>
+                      
+                      <!-- Exercise metadata -->
+                      <div class="exercise-meta">
+                        <span v-if="exercise.reps" class="meta-tag">{{ exercise.reps }} reps</span>
+                        <span v-if="exercise.time" class="meta-tag">{{ exercise.time }}</span>
+                        <span v-if="exercise.weight" class="meta-tag">{{ exercise.weight }}</span>
+                        <span v-if="exercise.rest" class="meta-tag rest-tag">Rest: {{ exercise.rest }}</span>
+                      </div>
+                      
+                      <!-- Protocol notes (EMOM, Ladder, etc.) -->
+                      <div v-if="exercise.notes" class="protocol-notes">
+                        <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                          <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        </svg>
+                        <span>{{ exercise.notes }}</span>
+                      </div>
+                      
+                      <!-- Coach notes -->
+                      <div v-if="exercise.coachNotes" class="coach-notes">
+                        <svg class="icon" viewBox="0 0 24 24" width="16" height="16">
+                          <path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+                        </svg>
+                        <span>{{ exercise.coachNotes }}</span>
+                      </div>
                     </div>
                     
-                    <div class="input-group">
-                      <label class="input-label">Weight (lbs)</label>
-                      <input 
-                        type="number" 
-                        v-model="set.weight"
-                        :disabled="set.completed"
-                        min="0"
-                        step="5"
-                        placeholder="0"
-                      />
-                    </div>
-                    
-                    <div class="input-group">
-                      <label class="input-label">Done</label>
-                      <input 
-                        type="checkbox" 
-                        v-model="set.completed"
-                      />
+                    <!-- Rest Timer Button -->
+                    <button v-if="exercise.rest && !exercise.rest.includes('EMOM')" 
+                            @click="startRestTimer(exercise.rest, exIndex)" 
+                            class="rest-timer-btn"
+                            :class="{ 'timer-active': restTimer.active && restTimer.exerciseIndex === exIndex }">
+                      <svg class="icon" viewBox="0 0 24 24" width="20" height="20">
+                        <path fill="currentColor" d="M15 1H9v2h6V1zm-4 13h2V8h-2v6zm8.03-6.61l1.42-1.42c-.43-.51-.9-.99-1.41-1.41l-1.42 1.42C16.07 4.74 14.12 4 12 4c-4.97 0-9 4.03-9 9s4.02 9 9 9 9-4.03 9-9c0-2.12-.74-4.07-1.97-5.61zM12 20c-3.87 0-7-3.13-7-7s3.13-7 7-7 7 3.13 7 7-3.13 7-7 7z"/>
+                      </svg>
+                      <span v-if="restTimer.active && restTimer.exerciseIndex === exIndex">
+                        {{ Math.floor(restTimer.remaining / 60) }}:{{ String(restTimer.remaining % 60).padStart(2, '0') }}
+                      </span>
+                      <span v-else>Timer</span>
+                    </button>
+                  </div>
+                  
+                  <div class="sets-list">
+                    <div 
+                      v-for="(set, setIndex) in exercise.sets" 
+                      :key="setIndex"
+                      class="set-row"
+                      :class="{ completed: set.completed }"
+                    >
+                      <span class="set-number">Set {{ set.setNumber }}</span>
+                      
+                      <div class="input-group">
+                        <label class="input-label">Reps</label>
+                        <input 
+                          type="number" 
+                          v-model="set.reps"
+                          :disabled="set.completed"
+                          min="1"
+                          placeholder="0"
+                        />
+                      </div>
+                      
+                      <div class="input-group">
+                        <label class="input-label">Weight (lbs)</label>
+                        <input 
+                          type="number" 
+                          v-model="set.weight"
+                          :disabled="set.completed"
+                          min="0"
+                          step="5"
+                          placeholder="0"
+                        />
+                      </div>
+                      
+                      <div class="input-group">
+                        <label class="input-label">Done</label>
+                        <input 
+                          type="checkbox" 
+                          v-model="set.completed"
+                          @change="onSetCompleted(exIndex, setIndex)"
+                        />
+                      </div>
                     </div>
                   </div>
+                  
+                  <button @click="addSetToExercise(exIndex)" class="add-set-btn">
+                    + Add Set
+                  </button>
                 </div>
-                
-                <button @click="addSetToExercise(exIndex)" class="add-set-btn">
-                  + Add Set
-                </button>
-              </div>
+              </template>
             </workout-session>
           </div>
         </div>
