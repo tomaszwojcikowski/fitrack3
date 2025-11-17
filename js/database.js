@@ -4,6 +4,10 @@ import Dexie from '../vendor/dexie.js';
 // 1. Initialize the database
 const db = new Dexie('WorkoutAppDB');
 
+// Check if IndexedDB is available (detects private browsing mode on iOS)
+let dbAvailable = true;
+let dbError = null;
+
 // 2. Define the schema (Version 1)
 db.version(1).stores({
   exercises: '++id, name, muscleGroup, type, equipment',
@@ -42,8 +46,106 @@ db.version(3).stores({
   });
 });
 
-// 3. Export the database instance for testing
-export { db };
+// 3. Test database availability and open connection
+async function checkDatabaseAvailability() {
+  if (!dbAvailable) {
+    return false;
+  }
+  
+  // First check if IndexedDB is available at all
+  if (!window.indexedDB) {
+    dbAvailable = false;
+    dbError = new Error('IndexedDB is not supported by this browser');
+    console.error('IndexedDB not supported');
+    return false;
+  }
+  
+  try {
+    // Try to open the database to verify it's accessible
+    await db.open();
+    
+    // Additional test: Try to perform a simple transaction to ensure database is fully functional
+    // This catches cases where open() succeeds but operations fail (e.g., private browsing on some iOS versions)
+    const testCount = await db.exercises.count();
+    
+    dbAvailable = true;
+    dbError = null;
+    return true;
+  } catch (error) {
+    dbAvailable = false;
+    dbError = error;
+    console.error('Database initialization failed:', error);
+    
+    // Check specific error types and provide helpful messages
+    if (error.name === 'QuotaExceededError' || 
+        error.message?.includes('QuotaExceeded') ||
+        error.message?.includes('quota')) {
+      console.warn('IndexedDB quota exceeded. This can happen in private browsing mode or when storage is full.');
+    } else if (error.name === 'InvalidStateError' ||
+               error.message?.includes('InvalidState')) {
+      console.warn('IndexedDB is in an invalid state. This often occurs in private browsing mode on iOS Safari.');
+    } else if (error.name === 'NotFoundError' ||
+               error.name === 'VersionError') {
+      console.warn('Database version error. This might be resolved by refreshing the page.');
+    } else {
+      console.warn('IndexedDB is not available. Possible causes: private browsing mode, browser restrictions, or storage issues.');
+    }
+    
+    return false;
+  }
+}
+
+// Get current database status
+export function getDatabaseStatus() {
+  return {
+    available: dbAvailable,
+    error: dbError
+  };
+}
+
+// Export database instance and availability checker
+export { db, checkDatabaseAvailability, dbAvailable, dbError };
+
+// Helper function to handle database operations with error handling and retry logic
+async function handleDbOperation(operation, fallbackValue = null) {
+  try {
+    if (!dbAvailable) {
+      console.warn('Database is not available');
+      return fallbackValue;
+    }
+    return await operation();
+  } catch (error) {
+    console.error('Database operation failed:', error);
+    
+    // Handle specific error cases that might be recoverable
+    if (error.name === 'DatabaseClosedError' || 
+        error.message?.includes('not open') ||
+        error.message?.includes('Database has been closed')) {
+      // Try to reopen the database
+      console.log('Attempting to reopen database...');
+      const reopened = await checkDatabaseAvailability();
+      if (reopened) {
+        // Retry the operation once
+        try {
+          return await operation();
+        } catch (retryError) {
+          console.error('Database operation retry failed:', retryError);
+          return fallbackValue;
+        }
+      }
+    } else if (error.name === 'QuotaExceededError') {
+      console.error('Storage quota exceeded. Consider clearing old data or using a different browser.');
+      dbAvailable = false;
+      dbError = error;
+    } else if (error.name === 'InvalidStateError') {
+      console.error('Database in invalid state. This is common in private browsing mode.');
+      dbAvailable = false;
+      dbError = error;
+    }
+    
+    return fallbackValue;
+  }
+}
 
 // 4. Export the encapsulated DAL API
 
@@ -53,8 +155,10 @@ export { db };
  * @returns {Promise<Array>} Array of exercises
  */
 export const getExercisesByMuscle = (muscle) => {
-  if (!muscle) return db.exercises.toArray();
-  return db.exercises.where('muscleGroup').equalsIgnoreCase(muscle).toArray();
+  return handleDbOperation(async () => {
+    if (!muscle) return db.exercises.toArray();
+    return db.exercises.where('muscleGroup').equalsIgnoreCase(muscle).toArray();
+  }, []);
 };
 
 /**
@@ -62,7 +166,7 @@ export const getExercisesByMuscle = (muscle) => {
  * @returns {Promise<Array>} Array of all exercises
  */
 export const getAllExercises = () => {
-  return db.exercises.toArray();
+  return handleDbOperation(() => db.exercises.toArray(), []);
 };
 
 /**
@@ -71,7 +175,7 @@ export const getAllExercises = () => {
  * @returns {Promise<number>} The ID of the newly created exercise
  */
 export const addExercise = async (exercise) => {
-  return db.exercises.add(exercise);
+  return handleDbOperation(() => db.exercises.add(exercise), null);
 };
 
 /**
@@ -81,7 +185,7 @@ export const addExercise = async (exercise) => {
  * @returns {Promise<number>} Number of updated records
  */
 export const updateExercise = async (id, updates) => {
-  return db.exercises.update(id, updates);
+  return handleDbOperation(() => db.exercises.update(id, updates), 0);
 };
 
 /**
@@ -90,7 +194,7 @@ export const updateExercise = async (id, updates) => {
  * @returns {Promise<void>}
  */
 export const deleteExercise = async (id) => {
-  return db.exercises.delete(id);
+  return handleDbOperation(() => db.exercises.delete(id), undefined);
 };
 
 /**
@@ -99,7 +203,7 @@ export const deleteExercise = async (id) => {
  * @returns {Promise<Object>} Exercise object
  */
 export const getExerciseById = async (id) => {
-  return db.exercises.get(id);
+  return handleDbOperation(() => db.exercises.get(id), null);
 };
 
 /**
@@ -108,34 +212,36 @@ export const getExerciseById = async (id) => {
  * @returns {Promise<number>} The ID of the newly created log
  */
 export const addWorkoutLog = async (logData) => {
-  // Dexie transactions ensure data integrity
-  return db.transaction('rw', db.workoutLogs, db.logPerformance, async () => {
-    const logEntry = {
-      date: logData.date,
-      templateId: logData.templateId
-    };
-    
-    // Add program tracking fields if present
-    if (logData.programId) {
-      logEntry.programId = logData.programId;
-    }
-    if (logData.week) {
-      logEntry.week = logData.week;
-    }
-    if (logData.day) {
-      logEntry.day = logData.day;
-    }
-    
-    const logId = await db.workoutLogs.add(logEntry);
+  return handleDbOperation(async () => {
+    // Dexie transactions ensure data integrity
+    return db.transaction('rw', db.workoutLogs, db.logPerformance, async () => {
+      const logEntry = {
+        date: logData.date,
+        templateId: logData.templateId
+      };
+      
+      // Add program tracking fields if present
+      if (logData.programId) {
+        logEntry.programId = logData.programId;
+      }
+      if (logData.week) {
+        logEntry.week = logData.week;
+      }
+      if (logData.day) {
+        logEntry.day = logData.day;
+      }
+      
+      const logId = await db.workoutLogs.add(logEntry);
 
-    const performanceData = logData.performance.map(p => ({
-      ...p,
-      logId: logId
-    }));
-    
-    await db.logPerformance.bulkAdd(performanceData);
-    return logId;
-  });
+      const performanceData = logData.performance.map(p => ({
+        ...p,
+        logId: logId
+      }));
+      
+      await db.logPerformance.bulkAdd(performanceData);
+      return logId;
+    });
+  }, null);
 };
 
 /**
@@ -145,21 +251,23 @@ export const addWorkoutLog = async (logData) => {
  * @returns {Promise<Array>} Array of workout logs
  */
 export const getWorkoutLogs = async (startDate, endDate) => {
-  if (!startDate && !endDate) {
-    return db.workoutLogs.toArray();
-  }
-  
-  let query = db.workoutLogs;
-  
-  if (startDate) {
-    query = query.where('date').aboveOrEqual(startDate.toISOString());
-  }
-  
-  if (endDate) {
-    query = query.where('date').belowOrEqual(endDate.toISOString());
-  }
-  
-  return query.toArray();
+  return handleDbOperation(async () => {
+    if (!startDate && !endDate) {
+      return db.workoutLogs.toArray();
+    }
+    
+    let query = db.workoutLogs;
+    
+    if (startDate) {
+      query = query.where('date').aboveOrEqual(startDate.toISOString());
+    }
+    
+    if (endDate) {
+      query = query.where('date').belowOrEqual(endDate.toISOString());
+    }
+    
+    return query.toArray();
+  }, []);
 };
 
 /**
@@ -168,7 +276,7 @@ export const getWorkoutLogs = async (startDate, endDate) => {
  * @returns {Promise<Array>} Array of performance records
  */
 export const getLogPerformance = async (logId) => {
-  return db.logPerformance.where('logId').equals(logId).toArray();
+  return handleDbOperation(() => db.logPerformance.where('logId').equals(logId).toArray(), []);
 };
 
 /**
@@ -177,7 +285,7 @@ export const getLogPerformance = async (logId) => {
  * @returns {Promise<number>} The ID of the newly created template
  */
 export const addWorkoutTemplate = async (template) => {
-  return db.workoutTemplates.add(template);
+  return handleDbOperation(() => db.workoutTemplates.add(template), null);
 };
 
 /**
@@ -185,7 +293,7 @@ export const addWorkoutTemplate = async (template) => {
  * @returns {Promise<Array>} Array of workout templates
  */
 export const getAllTemplates = async () => {
-  return db.workoutTemplates.toArray();
+  return handleDbOperation(() => db.workoutTemplates.toArray(), []);
 };
 
 /**
@@ -194,7 +302,7 @@ export const getAllTemplates = async () => {
  * @returns {Promise<Object>} Template object
  */
 export const getTemplateById = async (id) => {
-  return db.workoutTemplates.get(id);
+  return handleDbOperation(() => db.workoutTemplates.get(id), null);
 };
 
 /**
@@ -204,7 +312,7 @@ export const getTemplateById = async (id) => {
  * @returns {Promise<number>} Number of updated records
  */
 export const updateTemplate = async (id, updates) => {
-  return db.workoutTemplates.update(id, updates);
+  return handleDbOperation(() => db.workoutTemplates.update(id, updates), 0);
 };
 
 /**
@@ -213,7 +321,7 @@ export const updateTemplate = async (id, updates) => {
  * @returns {Promise<void>}
  */
 export const deleteTemplate = async (id) => {
-  return db.workoutTemplates.delete(id);
+  return handleDbOperation(() => db.workoutTemplates.delete(id), undefined);
 };
 
 /**
@@ -222,7 +330,7 @@ export const deleteTemplate = async (id) => {
  * @returns {Promise<Object>} Settings object
  */
 export const getUserSettings = async (key = 'default') => {
-  return db.userSettings.get(key);
+  return handleDbOperation(() => db.userSettings.get(key), null);
 };
 
 /**
@@ -232,7 +340,7 @@ export const getUserSettings = async (key = 'default') => {
  * @returns {Promise<string>} The settings key
  */
 export const saveUserSettings = async (key = 'default', settings) => {
-  return db.userSettings.put({ id: key, ...settings });
+  return handleDbOperation(() => db.userSettings.put({ id: key, ...settings }), null);
 };
 
 /**
@@ -241,7 +349,7 @@ export const saveUserSettings = async (key = 'default', settings) => {
  * @returns {Promise<number>} The ID of the newly created program
  */
 export const addProgram = async (program) => {
-  return db.programs.add(program);
+  return handleDbOperation(() => db.programs.add(program), null);
 };
 
 /**
@@ -249,7 +357,7 @@ export const addProgram = async (program) => {
  * @returns {Promise<Array>} Array of programs
  */
 export const getAllPrograms = async () => {
-  return db.programs.toArray();
+  return handleDbOperation(() => db.programs.toArray(), []);
 };
 
 /**
@@ -258,7 +366,7 @@ export const getAllPrograms = async () => {
  * @returns {Promise<Object>} Program object
  */
 export const getProgramById = async (id) => {
-  return db.programs.get(id);
+  return handleDbOperation(() => db.programs.get(id), null);
 };
 
 /**
@@ -268,7 +376,7 @@ export const getProgramById = async (id) => {
  * @returns {Promise<number>} Number of updated records
  */
 export const updateProgram = async (id, updates) => {
-  return db.programs.update(id, updates);
+  return handleDbOperation(() => db.programs.update(id, updates), 0);
 };
 
 /**
@@ -277,7 +385,7 @@ export const updateProgram = async (id, updates) => {
  * @returns {Promise<void>}
  */
 export const deleteProgram = async (id) => {
-  return db.programs.delete(id);
+  return handleDbOperation(() => db.programs.delete(id), undefined);
 };
 
 /**
@@ -286,20 +394,22 @@ export const deleteProgram = async (id) => {
  * @returns {Promise<Object>} Program progress object
  */
 export const getProgramProgress = async (programId) => {
-  let progress = await db.programProgress.get(programId);
-  if (!progress) {
-    // Initialize progress
-    progress = {
-      id: programId,
-      programId: programId,
-      currentWeek: 1,
-      currentDay: 1,
-      startDate: new Date().toISOString(),
-      lastWorkoutDate: null
-    };
-    await db.programProgress.put(progress);
-  }
-  return progress;
+  return handleDbOperation(async () => {
+    let progress = await db.programProgress.get(programId);
+    if (!progress) {
+      // Initialize progress
+      progress = {
+        id: programId,
+        programId: programId,
+        currentWeek: 1,
+        currentDay: 1,
+        startDate: new Date().toISOString(),
+        lastWorkoutDate: null
+      };
+      await db.programProgress.put(progress);
+    }
+    return progress;
+  }, null);
 };
 
 /**
@@ -309,8 +419,11 @@ export const getProgramProgress = async (programId) => {
  * @returns {Promise<number>} Number of updated records
  */
 export const updateProgramProgress = async (programId, updates) => {
-  const progress = await getProgramProgress(programId);
-  return db.programProgress.put({ ...progress, ...updates });
+  return handleDbOperation(async () => {
+    const progress = await getProgramProgress(programId);
+    if (!progress) return 0;
+    return db.programProgress.put({ ...progress, ...updates });
+  }, 0);
 };
 
 /**
@@ -319,14 +432,14 @@ export const updateProgramProgress = async (programId, updates) => {
  * @returns {Promise<void>}
  */
 export const resetProgramProgress = async (programId) => {
-  return db.programProgress.put({
+  return handleDbOperation(() => db.programProgress.put({
     id: programId,
     programId: programId,
     currentWeek: 1,
     currentDay: 1,
     startDate: new Date().toISOString(),
     lastWorkoutDate: null
-  });
+  }), undefined);
 };
 
 /**
@@ -334,25 +447,26 @@ export const resetProgramProgress = async (programId) => {
  * @returns {Promise<void>}
  */
 export const seedDatabase = async () => {
-  const exerciseCount = await db.exercises.count();
-  
-  // Only seed if database is empty
-  if (exerciseCount === 0) {
-    await db.exercises.bulkAdd([
-      { name: 'Squat', muscleGroup: 'Legs', type: 'Compound', equipment: 'Barbell' },
-      { name: 'Bench Press', muscleGroup: 'Chest', type: 'Compound', equipment: 'Barbell' },
-      { name: 'Deadlift', muscleGroup: 'Back', type: 'Compound', equipment: 'Barbell' },
-      { name: 'Overhead Press', muscleGroup: 'Shoulders', type: 'Compound', equipment: 'Barbell' },
-      { name: 'Barbell Row', muscleGroup: 'Back', type: 'Compound', equipment: 'Barbell' },
-      { name: 'Pull-ups', muscleGroup: 'Back', type: 'Compound', equipment: 'Bodyweight' },
-      { name: 'Dips', muscleGroup: 'Chest', type: 'Compound', equipment: 'Bodyweight' },
-      { name: 'Lunges', muscleGroup: 'Legs', type: 'Compound', equipment: 'Dumbbell' },
-      { name: 'Bicep Curls', muscleGroup: 'Arms', type: 'Isolation', equipment: 'Dumbbell' },
-      { name: 'Tricep Extensions', muscleGroup: 'Arms', type: 'Isolation', equipment: 'Dumbbell' }
-    ]);
-  }
-  
-  const programCount = await db.programs.count();
+  return handleDbOperation(async () => {
+    const exerciseCount = await db.exercises.count();
+    
+    // Only seed if database is empty
+    if (exerciseCount === 0) {
+      await db.exercises.bulkAdd([
+        { name: 'Squat', muscleGroup: 'Legs', type: 'Compound', equipment: 'Barbell' },
+        { name: 'Bench Press', muscleGroup: 'Chest', type: 'Compound', equipment: 'Barbell' },
+        { name: 'Deadlift', muscleGroup: 'Back', type: 'Compound', equipment: 'Barbell' },
+        { name: 'Overhead Press', muscleGroup: 'Shoulders', type: 'Compound', equipment: 'Barbell' },
+        { name: 'Barbell Row', muscleGroup: 'Back', type: 'Compound', equipment: 'Barbell' },
+        { name: 'Pull-ups', muscleGroup: 'Back', type: 'Compound', equipment: 'Bodyweight' },
+        { name: 'Dips', muscleGroup: 'Chest', type: 'Compound', equipment: 'Bodyweight' },
+        { name: 'Lunges', muscleGroup: 'Legs', type: 'Compound', equipment: 'Dumbbell' },
+        { name: 'Bicep Curls', muscleGroup: 'Arms', type: 'Isolation', equipment: 'Dumbbell' },
+        { name: 'Tricep Extensions', muscleGroup: 'Arms', type: 'Isolation', equipment: 'Dumbbell' }
+      ]);
+    }
+    
+    const programCount = await db.programs.count();
   
   // Seed sample programs if none exist
   if (programCount === 0) {
@@ -420,7 +534,8 @@ export const seedDatabase = async () => {
         }
       }
     ]);
-  }
+    }
+  }, undefined);
 };
 
 /**
@@ -429,7 +544,7 @@ export const seedDatabase = async () => {
  * @returns {Promise<number>} The ID of the newly created block
  */
 export const addBlock = async (block) => {
-  return db.blocks.add(block);
+  return handleDbOperation(() => db.blocks.add(block), null);
 };
 
 /**
@@ -438,7 +553,7 @@ export const addBlock = async (block) => {
  * @returns {Promise<Array>} Array of blocks
  */
 export const getBlocksByProgramId = async (programId) => {
-  return db.blocks.where('programId').equals(programId).sortBy('blockNumber');
+  return handleDbOperation(() => db.blocks.where('programId').equals(programId).sortBy('blockNumber'), []);
 };
 
 /**
@@ -447,7 +562,7 @@ export const getBlocksByProgramId = async (programId) => {
  * @returns {Promise<number>} The ID of the newly created flow
  */
 export const addMobilityFlow = async (flow) => {
-  return db.mobilityFlows.add(flow);
+  return handleDbOperation(() => db.mobilityFlows.add(flow), null);
 };
 
 /**
@@ -455,7 +570,7 @@ export const addMobilityFlow = async (flow) => {
  * @returns {Promise<Array>} Array of mobility flows
  */
 export const getAllMobilityFlows = async () => {
-  return db.mobilityFlows.orderBy('flowNumber').toArray();
+  return handleDbOperation(() => db.mobilityFlows.orderBy('flowNumber').toArray(), []);
 };
 
 /**
@@ -464,7 +579,7 @@ export const getAllMobilityFlows = async () => {
  * @returns {Promise<Object>} Flow object
  */
 export const getMobilityFlowById = async (id) => {
-  return db.mobilityFlows.get(id);
+  return handleDbOperation(() => db.mobilityFlows.get(id), null);
 };
 
 /**
@@ -473,7 +588,7 @@ export const getMobilityFlowById = async (id) => {
  * @returns {Promise<number>} The ID of the newly created instance
  */
 export const addExerciseInstance = async (instance) => {
-  return db.exerciseInstances.add(instance);
+  return handleDbOperation(() => db.exerciseInstances.add(instance), null);
 };
 
 /**
@@ -482,7 +597,7 @@ export const addExerciseInstance = async (instance) => {
  * @returns {Promise<Array>} Array of exercise instances
  */
 export const getExerciseInstancesByTemplateId = async (templateId) => {
-  return db.exerciseInstances.where('templateId').equals(templateId).toArray();
+  return handleDbOperation(() => db.exerciseInstances.where('templateId').equals(templateId).toArray(), []);
 };
 
 /**
@@ -491,21 +606,23 @@ export const getExerciseInstancesByTemplateId = async (templateId) => {
  * @returns {Promise<Object>} Object with phases as keys and arrays of instances as values
  */
 export const getExerciseInstancesByPhase = async (templateId) => {
-  const instances = await getExerciseInstancesByTemplateId(templateId);
-  const grouped = {
-    prepare: [],
-    practice: [],
-    perform: [],
-    ponder: []
-  };
-  
-  instances.forEach(instance => {
-    if (grouped[instance.phase]) {
-      grouped[instance.phase].push(instance);
-    }
-  });
-  
-  return grouped;
+  return handleDbOperation(async () => {
+    const instances = await db.exerciseInstances.where('templateId').equals(templateId).toArray();
+    const grouped = {
+      prepare: [],
+      practice: [],
+      perform: [],
+      ponder: []
+    };
+    
+    instances.forEach(instance => {
+      if (grouped[instance.phase]) {
+        grouped[instance.phase].push(instance);
+      }
+    });
+    
+    return grouped;
+  }, { prepare: [], practice: [], perform: [], ponder: [] });
 };
 
 /**
@@ -515,7 +632,7 @@ export const getExerciseInstancesByPhase = async (templateId) => {
  * @returns {Promise<number>} Number of updated records
  */
 export const updateExerciseInstance = async (id, updates) => {
-  return db.exerciseInstances.update(id, updates);
+  return handleDbOperation(() => db.exerciseInstances.update(id, updates), 0);
 };
 
 /**
@@ -524,5 +641,5 @@ export const updateExerciseInstance = async (id, updates) => {
  * @returns {Promise<void>}
  */
 export const deleteExerciseInstance = async (id) => {
-  return db.exerciseInstances.delete(id);
+  return handleDbOperation(() => db.exerciseInstances.delete(id), undefined);
 };
